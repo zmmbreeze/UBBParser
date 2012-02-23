@@ -347,7 +347,7 @@ var UBBParser = function () {
             if ( $node.length !== 1 ) {
                 throw 'ParseHtml: $node must only contains one element!';
             }
-            var $children = node.contents()
+            var $children = $node.contents()
                 node = parse$Node( $node, currentNode ),
                 l = $children.length;
             for( var i=0; i<l; i++ ) {
