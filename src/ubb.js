@@ -152,6 +152,15 @@ var UBBParser = function () {
             return this._parent._children[ next ];
         }
     };
+    Node.prototype.clone = function() {
+        var n = new Node();
+        n.tagName = this.tagName;                  // 标签名
+        n.value = this.value;                      // 值
+        n._attrs = this._attrs;                    // 属性map;
+        n._parent = this._parent;                  // 父节点
+        n._children = this._children.slice();      // 子节点数组;
+        return n;
+    };
     /**
      * 返回当前节点的最后一个子节点
      * @return {object} 子节点
@@ -216,9 +225,9 @@ var UBBParser = function () {
                     // 如果不同则重新生成一个ul/ol
                     } else {
                         var n = new Node();
-                        n.tagName = listType;
-                        n.insertAfter( parentNode );
-                        return n;
+                        n.tagName = parentNode.tagName;
+                        n.insertBefore( parentNode );
+                        // TODO
                     }
 
                 // 如果没有父元素为ul/ol
