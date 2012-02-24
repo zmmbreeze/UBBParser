@@ -152,15 +152,6 @@ var UBBParser = function () {
             return this._parent._children[ next ];
         }
     };
-    Node.prototype.clone = function() {
-        var n = new Node();
-        n.tagName = this.tagName;                  // 标签名
-        n.value = this.value;                      // 值
-        n._attrs = this._attrs;                    // 属性map;
-        n._parent = this._parent;                  // 父节点
-        n._children = this._children.slice();      // 子节点数组;
-        return n;
-    };
     /**
      * 返回当前节点的最后一个子节点
      * @return {object} 子节点
@@ -175,11 +166,21 @@ var UBBParser = function () {
     Node.prototype.firstChild = function() {
         return this._children && this._children[0];
     };
+    Node.prototype.findParentByTagName = function( tagNames ) {
+        var node = this._parent;
+        tagNames = typeof tagNames === 'string' ? [tagNames] : tagNames;
+        while( node ) {
+            if( $.inArray( node.tagName, tagNames ) ) {
+                return node;
+            }
+            node = node._parent
+        }
+    };
     var Util = {
             /**
              * 判断一个样式是否为bold
              */
-            isBold = function( fontWeight ) {
+            isBold: function( fontWeight ) {
                 var number = parseInt( fontWeight );
                 if( isNaN(number) ) {
                     return /^(bold|bolder)$/.test( fontWeight );
@@ -190,19 +191,19 @@ var UBBParser = function () {
             /**
              * 判断一个样式是否为bold
              */
-            isItalic = function( fontStyle ) {
+            isItalic: function( fontStyle ) {
                 return /^(italic|oblique)$/.test( fontWeight );
             },
             /**
              * 判断是否是一个有序列表
              */
-            isOrderedList = function( listStyleType ) {
+            isOrderedList: function( listStyleType ) {
                 return listStyleType !== 'none' && !this.isUnOrderedList( listStyleType );
             },
             /**
              * 判断是否是一个无序列表
              */
-            isUnOrderedList = function( listStyleType ) {
+            isUnOrderedList: function( listStyleType ) {
                 return /^(disc|circle|square)$/.test( listStyleType );
             },
             /**
@@ -210,31 +211,39 @@ var UBBParser = function () {
              * @param {object} $node 节点
              * @param {object} re 对象
              */
-            parseListNode = function( $node, re, parentNode ) {
+            parseListNode: function( $node, re, parentNode ) {
                 var listStyleType = $node.css('list-style-type');
                 if ( listStyleType === 'none' ) {
                     return;
                 }
-                var listType = this.isUnOrderedList( listStyleType ) ? 'ul' :'li';
+                var listType = this.isUnOrderedList( listStyleType ) ? 'ul' :'ol';
                 re.tagName = 'li';
                 // 如果有父元素，且为ul/ol
-                if ( parentNode && /^(ul|ol)$/.test( parentNode.tagName ) ) {
+                if ( parentNode && parentNode.findParentByTagName( ['ul','ol'] ) ) {
                     // 如果父元素的listType与li的listType相同，则略过，即默认添加
                     if ( parentNode.tagName === listType ) {
                         return;
                     // 如果不同则重新生成一个ul/ol
                     } else {
-                        var n = new Node();
-                        n.tagName = parentNode.tagName;
-                        n.insertBefore( parentNode );
-                        // TODO
+                        // 如果已经父节点有了子节点，则生成一个父节点
+                        if ( parentNode.children().length ) {
+                            var n = new Node(),
+                                children = parentNode.children();
+                            n.tagName = parentNode.tagName;
+                            n.insertBefore( parentNode );
+                            for ( var i=0,l=children.length; i<l; i++ ) {
+                                n.append(children[i]);
+                            }
+                        }
+                        // 修改父节点tagName
+                        parentNode.tagName = listType;
                     }
-
                 // 如果没有父元素为ul/ol
                 } else {
                     var n = new Node();
-                    n.tagName = listType;
-                    re.wrap( n );
+                    n.tagName = 'li';
+                    re.tagName = listType;
+                    re.append( n );
                 }
             },
             /**
@@ -244,7 +253,7 @@ var UBBParser = function () {
              * @param {object} $node 节点
              * @param {object} re 对象
              */
-            parseTextNode = function( $node, re ) {
+            parseTextNode: function( $node, re ) {
                 re.tagName = '#text';
                 var text = $node.text();
                 if ( !text ) {
