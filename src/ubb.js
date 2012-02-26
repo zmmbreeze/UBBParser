@@ -1,4 +1,4 @@
-var UBBParser = function () {
+var UBBParser = (function () {
     /**
      * 中间格式node节点的格式
      */
@@ -22,7 +22,9 @@ var UBBParser = function () {
     };
     Node.prototype.children = function() {
         // clone一个新的数组，避免对原子节点数组的修改
-        return this._children.slice();
+        return this._children
+                ? this._children.slice()
+                : [];
     };
     /**
      * 将指定的节点添加为当前节点的最后一个子节点
@@ -32,6 +34,7 @@ var UBBParser = function () {
         this._children = this._children || [];
         node._parent = this;
         this._children.push( node );
+        return this;
     };
     /**
      * 将指定的节点插入到当前节点子节点中的指定位置
@@ -170,13 +173,28 @@ var UBBParser = function () {
         var node = this._parent;
         tagNames = typeof tagNames === 'string' ? [tagNames] : tagNames;
         while( node ) {
-            if( $.inArray( node.tagName, tagNames ) ) {
+            if( ~$.inArray( node.tagName, tagNames ) ) {
                 return node;
             }
-            node = node._parent
+            node = node._parent;
         }
     };
     var Util = {
+            /**
+             * 判断display样式是否是换行的样式
+             */
+            isBlock: function( displayStyle ) {
+                return ~$.inArray( displayStyle, [
+                    'block',
+                    'table',
+                    'table-cell',
+                    'table-caption',
+                    'table-footer-group',
+                    'table-header-group',
+                    'table-row',
+                    'table-row-group'
+                ]);
+            },
             /**
              * 判断一个样式是否为bold
              */
@@ -191,7 +209,7 @@ var UBBParser = function () {
             /**
              * 判断一个样式是否为bold
              */
-            isItalic: function( fontStyle ) {
+            isItalic: function( fontWeight ) {
                 return /^(italic|oblique)$/.test( fontWeight );
             },
             /**
@@ -343,13 +361,21 @@ var UBBParser = function () {
                     break;
                 case '#text':
                     // 处理文本节点
-                    parseTextNode( $node, re );
+                    Util.parseTextNode( $node, re );
+                    break;
+                case 'br':
+                    re.tagName = '#text';
+                    re.value = '\n';
+                    break;
                 default:
                     break;
             }
             if( display === 'list-item' ) {
                 // 重新定位到另一个新生成的父节点
                 Util.parseListNode( $node, re, currentNode );
+            }
+            if( Util.isBlock( display ) ) {
+                re.tagName = '#line';
             }
             // 用户设置第三方的标签
             // filter( $node, re );
@@ -365,11 +391,24 @@ var UBBParser = function () {
             if ( $node.length !== 1 ) {
                 throw 'ParseHtml: $node must only contains one element!';
             }
-            var $children = $node.contents()
+            var tmp,
+                tmpChildren,
+                $children = $node.contents(),
                 node = parse$Node( $node, currentNode ),
-                l = $children.length;
-            for( var i=0; i<l; i++ ) {
-                node.append( parseHtml( $children.eq(i), node ) );
+                i = 0,
+                l = $children.length,
+                ii = 0,
+                ll;
+            for( i=0; i<l; i++ ) {
+                tmp =parseHtml( $children.eq(i), node );
+                if ( tmp.tagName ) {
+                    node.append( tmp );
+                } else {
+                    tmpChildren = tmp.children();
+                    for (ii=0,ll=tmpChildren.length; ii<ll; ii++) {
+                        node.append( tmpChildren[ii] );
+                    }
+                }
             }
             return node;
         },
@@ -382,74 +421,15 @@ var UBBParser = function () {
         rendUbb = function( node ) {
 
         };
-/*
-    // extend
-    function extend ( Super, Son ) {
-        for (var method in Super.prototype) {
-            Son.prototype[method] = Super.prototype[method];
-        }
-    }
-
-    function format ( array ) {
-        var args = '',
-            tmp;
-        for ( var i=0,l=array.length; i<l; i++ ) {
-            tmp = array[i];
-            args = ' ' + tmp.key + '=' + tmp['key'];
-       }
-    }
-
-    function Tag() {
-    }
-    Tag.prototype = {
-        //name: '',                 // 标签名字
-        //parent: null,             // 父标签
-        //arguments: null,          // [{key:value}] 或者 value(此时为默认值，例如：[color=#FFF][/color])
-        //text: '',                 // 标签里面的内容
-        needsEnd: true,             // 是否有end标签
-        // 是否自动补全标签
-        isAutoClose: function () {
-            return true;    
-        },
-        // 验证标签
-        validate: function() {
-            return true;
-        },
-        content: function() {
-            return this.text;
-        },
-        open: function() {
-            return '';
-        },
-        close: function() {
-            return '';
-        },
-        toString: function() {
-            return ['[',
-                    this.name,
-                    typeof this.arguments === 'string' ?
-                            '='+this.arguments :
-                            format( this.arguments ),
-                    ']',
-                    this.content,
-                    '[/',
-                    this.name,
-                    ']'].join('');
-        }
-    }
-
-    function BoldTag() {
-        
-    }
-*/
 
     return function ( setting ) {
         this.setting = setting;
-        this.HTMLtoUBB = function ( ubb ) {
-            
+        this.HTMLtoUBB = function ( $dom ) {
+            var node = parseHtml($dom);
+            console.log( node );
         };
         this.UBBtoHTML = function( ubb ) {
-
         };
+        this.Node = Node;
     };
-}();
+})();

@@ -3,31 +3,72 @@
 <head>
 	<meta charset="UTF-8">
 	<title></title>
-</head>
-<body>
-	<textarea name="" id="input" cols="30" rows="10"></textarea>
-	<button id="button">changeToUbb</button>
     <style type="text/css">
-        p,li {
+        #source ul p, #source ul li {
             display: list-item;
             list-style: decimal outside;
             margin-left: 25px;
         }
     </style>
-    <ul>
+</head>
+<body>
+    <h1>HTML：</h1>
+    <div id="source">
+        <ul>
+            <div>
+                <li>li:asdasd</li>
+                <li>li:asdasd</li>
+            </div>
+            <p>p:asdasd</p>
+            <p>p:asdasd</p>
+        </ul>
         <div>
-        <li>li:asdasd</li>
-        <li>li:asdasd</li>
+            <div>
+                对于没有便秘问题的人来说，使用泻药来减肥，实在是不智之举。
+            </div>
+            <div>对于没有便秘问题的人来说，使用泻药来减肥，实在是不智之举。</div>
+        </div>
+        <p>对于没有便秘问题的人来说，使用泻药来减肥，实在是不智之举。</p>
+        <!--
+        <div>before
+        <p style="display:inline-table;">display:inline-table;</p>
+        after</div>
+        <div>before
+        <p style="display:table;">display:table;</p>
+        after</div>
+        <div>before
+        <p style="display:table-caption;">display:table-caption;</p>
+        after</div>
+        <div>before
+        <p style="display:table-cell;">display:table-cell;</p>
+        after</div>
+        <div>before
+        <p style="display:table-column;">display:table-column;</p>
+        after</div>
+        <div>before
+        <p style="display:table-column-group;">display:table-column-group;</p>
+        after</div>
+        <div>before
+        <p style="display:table-footer-group;">display:table-footer-group;</p>
+        after</div>
+        <div>before
+        <p style="display:table-header-group;">display:table-header-group;</p>
+        after</div>
+        <div>before
+        <p style="display:table-row;">display:table-row;</p>
+        after</div>
+        <div>before
+        <p style="display:table-row-group;">display:table-row-group;</p>
+        after</div>-->
     </div>
-        <p>p:asdasd</p>
-        <p>p:asdasd</p>
-    </ul>
+	<button id="button">changeToUbb</button>
+
 	<h1>Result:</h1>
 	<div id="view"></div>
 	<script src="src/jquery.1.7.1.min.js"></script>
 	<script src="src/ubb.js"></script>
 	<script>
-		
+		new UBBParser().HTMLtoUBB( $('#source') );
 	</script>
 </body>
 </html>
