@@ -9,26 +9,27 @@
             list-style: decimal outside;
             margin-left: 25px;
         }
+        #source ul li {
+            list-style-type: circle;
+        }
     </style>
 </head>
 <body>
     <h1>HTML：</h1>
     <div id="source">
         <ul>
-            <div>
-                <li>li:asdasd</li>
-                <li>li:asdasd</li>
-            </div>
-            <p>p:asdasd</p>
-            <p>p:asdasd</p>
+            <li><a href="http://www.guokr.com/">这里是一个链接</a></li>
+            <li>li:asdasd</li>
+            <p>p:<i>asdasd</i></p>
+            <p style="font-weight:bold;">p:asdasd</p>
         </ul>
         <div>
-            <div>
-                对于没有便秘问题的人来说，使用泻药来减肥，实在是不智之举。
-            </div>
-            <div>对于没有便秘问题的人来说，使用泻药来减肥，实在是不智之举。</div>
+            <div><p>多层嵌套div的文案</p></div>
         </div>
-        <p>对于没有便秘问题的人来说，使用泻药来减肥，实在是不智之举。</p>
+        <p><img class="gui-ubb-flash" data-src="http://youku.com/asd.swf" src="/skin/imgs/flash.png" width="480" height="400"></p>
+        <p><img src="http://www.guokr.com/gkimage/jr/y1/zk/jry1zk.jpg"></p>
+        <p>恩，如果图中表示的是占<span style="color: green;">百分比</span>，那么影响最大的因,<i><b>素很可能</b></i>是这个星座的用户数量。</p>
+        <p>但是绝对<i style="color: red;font-weight:bold;">没有星座</i>那么<b>夸张</b></p>
         <!--
         <div>before
         <p style="display:inline-table;">display:inline-table;</p>
@@ -68,7 +69,7 @@
 	<script src="src/jquery.1.7.1.min.js"></script>
 	<script src="src/ubb.js"></script>
 	<script>
-		new UBBParser().HTMLtoUBB( $('#source') );
+		console.log( new UBBParser().HTMLtoUBB( $('#source') ) );
 	</script>
 </body>
 </html>
