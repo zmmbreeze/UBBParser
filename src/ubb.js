@@ -13,11 +13,13 @@ var UBBParser = (function () {
      * 中间格式node节点的格式
      */
     function Node() {
+        /*
         this.tagName = null;        // 标签名
         this.value = null;          // 值
         this._attrs = null;         // 属性map;
         this._parent = null;        // 父节点
         this._children = null;      // 子节点数组;
+        */
     };
     Node.prototype.attr = function( key, value ) {
         this._attrs = this._attrs || {};
@@ -177,6 +179,8 @@ var UBBParser = (function () {
         var prev = this.getIndex() - 1;
         if ( prev >= 0 ) {
             return this._parent._children[ prev ];
+        } else {
+            return new Node();
         }
     };
     /**
@@ -186,8 +190,10 @@ var UBBParser = (function () {
     Node.prototype.next = function() {
         var index = this.getIndex(),
             next = index + 1;
-        if ( ~index && next < this._children.length ) {
+        if ( ~index && next < this._parent._children.length ) {
             return this._parent._children[ next ];
+        } else {
+            return new Node();
         }
     };
     /**
@@ -305,7 +311,7 @@ var UBBParser = (function () {
                 var listType = this.isUnOrderedList( listStyleType ) ? 'ul' :'ol';
                 start.tagName = 'li';
                 // 如果有父元素，且为ul/ol
-                if ( parentNode && ~$.inArray( parentNode.tagName, ['ul','ol'] ) ) {
+                if ( parentNode && (parentNode = parentNode.findParentByTagName(['ul','ol'], true)) ) {
                     // 如果父元素的listType与li的listType相同，则略过，即默认添加
                     if ( parentNode.tagName === listType ) {
                     // 如果不同则重新生成一个ul/ol
@@ -485,8 +491,7 @@ var UBBParser = (function () {
                         }
                         break;
                     case 'br':
-                        start.tagName = '#text';
-                        start.value = '\n';
+                        start.tagName = 'br';
                         break;
                     default:
                         break;
@@ -502,10 +507,14 @@ var UBBParser = (function () {
                 var re = [];
                 switch( node.tagName ) {
                     case '#line':
-                        var children = node.children();
-                        // 如果子元素不是单个的#line，就添加换行
-                        // 并且当前元素有父元素
-                        if ( !(children.length === 1 && children[0].tagName === '#line') && node.parent() ) {
+                        var children,
+                            prevTagName;
+                        if (node.parent()
+                            && (prevTagName = node.prev().tagName)
+                            && prevTagName !== 'br'
+                            && (children = node.children())
+                            && children.length
+                            && children[0].tagName === '#text' ) {
                             re.push('\n');
                         }
                         re.push(sonString);
@@ -525,14 +534,25 @@ var UBBParser = (function () {
                         re.push('\n');
                         break;
                     case 'ul':
+                        if ( node.prev().tagName ) {
+                            re.push('\n');
+                        }
                         re.push('[ul]\n');
                         re.push(sonString);
                         re.push('[/ul]')
                         break;
                     case 'ol':
+                        if ( node.prev().tagName ) {
+                            re.push('\n');
+                        }
                         re.push('[ol]\n');
                         re.push(sonString);
                         re.push('[/ol]')
+                        break;
+                    case 'br':
+                        if ( node.next().tagName ) {
+                            re.push('\n');
+                        }
                         break;
                     default:
                         re.push('[');
@@ -565,9 +585,7 @@ var UBBParser = (function () {
             if ( $node.length !== 1 ) {
                 throw 'ParseHtml: $node must only contains one element!';
             }
-            var tmp,
-                tmpChildren,
-                $children = $node.contents(),
+            var $children = $node.contents(),
                 start = Util.parse$Node( $node, currentNode, setting ),    // 父节点添加此节点
                 end,                                                       // 子节点添加的位置
                 i = 0,
@@ -585,22 +603,20 @@ var UBBParser = (function () {
             } else {
                 end = start;
             }
-            for( i=0; i<l; i++ ) {
-                tmp = parseHtml( $children.eq(i), end, setting );
-                // 此节点为空，且没有子节点
-                if ( tmp == null ) {
-                    continue;
+
+            // 添加上下文关系
+            if ( currentNode ) {
                 // 正常节点
-                } else if ( tmp.tagName ) {
-                    end.append( tmp );
-                // 没有tagName则此节点为空节点，但是它的子节点要添加
+                if ( start.tagName ) {
+                    currentNode.append( start );
+                // 没有tagName则此节点为空节点，则直接添加子节点
                 } else {
-                    tmpChildren = tmp.children();
-                    for (ii=0,ll=tmpChildren.length; ii<ll; ii++) {
-                        tmpChildren[ii].detach();
-                        end.append( tmpChildren[ii] );
-                    }
+                    end = currentNode;
                 }
+            }
+            // 解析子节点
+            for( i=0; i<l; i++ ) {
+                parseHtml( $children.eq(i), end, setting );
             }
             return start;
         },
