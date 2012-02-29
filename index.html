@@ -4,6 +4,11 @@
 	<meta charset="UTF-8">
 	<title></title>
     <style type="text/css">
+        div,p {
+            padding:0;
+            margin:0;
+            line-height:24px;
+        }
         #source {
             border: 1px solid #CCC;
         }
@@ -25,17 +30,26 @@
 <body>
     <h1>HTML：</h1>
     <div id="source" contenteditable>
-        asdasd
+        ======
+        <div>
+            qweqwe
+            <br />
+        </div>
+        ======
+        <div></div>
         <div></div>
         <br/>
-        <br/>
+        <div></div>
+        <div></div>
+        <p></p>
         asdasd<br/>
         <div>asdas</div>
         <ul>
             <div>
                 sadasdad
-                <li><a href="http://www.guokr.com/">这里是一个链接</a>br换行
-        <br/>ssss
+                <li>
+                    <a href="http://www.guokr.com/">这里是一个链接</a>br换行
+                    <br/>ssss
                 </li>
                 <li>br结尾<br/></li>
                 <li><div>XXXX</div></li>
@@ -47,8 +61,10 @@
         <div>
             <div><p>多层嵌套div的文案</p></div>
         </div>
-        <p><img class="gui-ubb-flash" data-src="http://youku.com/asd.swf" src="/skin/imgs/flash.png" width="480" height="400"></p>
-        <p><img src="http://www.guokr.com/gkimage/jr/y1/zk/jry1zk.jpg"></p>
+        <p><img class="gui-ubb-flash" data-src="http://youku.com/asd.swf" src="/skin/imgs/flash.png" width="480" height="400">asd</p>
+        <p>内敛图片<img src="http://www.guokr.com/gkimage/jr/y1/zk/jry1zk.jpg">111</p>
+        <p>块级图片<img src="http://www.guokr.com/gkimage/jr/y1/zk/jry1zk.jpg" style="display:block;">111</p>
+        <p>高度为0的块级图片<img src="http://www.guokr.com/gkimage/jr/y1/zk/jry1zk.jpg" style="height:0;">111</p>
         <p>恩，如果图中表示的是占<span style="color: green;">百分比</span>，那么影响最大的因,<i><b>素很可能</b></i>是这个星座的用户数量。</p>
         <p>但是绝对<i style="color: red;font-weight:bold;">没有星座</i>那么<b>夸张</b></p>
         <!--

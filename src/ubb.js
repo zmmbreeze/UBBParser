@@ -169,6 +169,7 @@ var UBBParser = (function () {
                     return this._children[i];
                 }
             }
+            return -1;
         }
     };
     /**
@@ -179,8 +180,6 @@ var UBBParser = (function () {
         var prev = this.getIndex() - 1;
         if ( prev >= 0 ) {
             return this._parent._children[ prev ];
-        } else {
-            return new Node();
         }
     };
     /**
@@ -192,8 +191,6 @@ var UBBParser = (function () {
             next = index + 1;
         if ( ~index && next < this._parent._children.length ) {
             return this._parent._children[ next ];
-        } else {
-            return new Node();
         }
     };
     /**
@@ -216,7 +213,7 @@ var UBBParser = (function () {
      * @param {boolean} includeSelf 当前是否也需要判断
      * @return {object} 最先找到的符合的节点,没有找到则为空
      */
-    Node.prototype.findParentByTagName = function( tagNames, includeSelf ) {
+    Node.prototype.findAncestorByTagName = function( tagNames, includeSelf ) {
         var node = includeSelf ? this : this._parent;
         tagNames = typeof tagNames === 'string' ? [tagNames] : tagNames;
         while( node ) {
@@ -253,7 +250,59 @@ var UBBParser = (function () {
         }
         return n;
     };
+    /**
+     * 判断一个节点是否其祖先节点的最下面的节点
+     * @param {object} relative 祖先元素，默认为当前节点的父节点
+     * @return {boolean} 
+     */
+    Node.prototype.isLast = function( relative ) {
+        if ( relative ) {
+            var node = this;
+            do{
+                if ( !node.isLast() ) {
+                    return false;
+                }
+                node = node._parent;
+            } while( node !== relative );
+            return true;
+        } else {
+            var i = this.getIndex();
+            if ( ~i ) {
+                return i === this._parent._children.length - 1;
+            } else {
+                // 没有父节点，或不是父节点的子元素
+                return true;
+            }
+        }
+    };
+    /**
+     * 判断一个节点是否其祖先节点的最上面的节点
+     * @param {object} relative 祖先元素，默认为当前节点的父节点
+     * @return {boolean} 
+     */
+    Node.prototype.isFirst = function( relative ) {
+        if ( relative ) {
+            var node = this;
+            do{
+                if ( !node.isFirst() ) {
+                    return false;
+                }
+                node = node._parent;
+            } while( node !== relative );
+            return true;
+        } else {
+            var i = this.getIndex();
+            if ( ~i ) {
+                return i === 0;
+            } else {
+                // 没有父节点，或不是父节点的子元素
+                return true;
+            }
+        }
+    };
     var Util = {
+
+            inlineUbbTags: ['#text','bold','italic','color','link','image','video',],
             /**
              * 判断display样式是否是换行的样式
              */
@@ -310,20 +359,16 @@ var UBBParser = (function () {
                 }
                 var listType = this.isUnOrderedList( listStyleType ) ? 'ul' :'ol';
                 start.tagName = 'li';
-                // 如果有父元素，且为ul/ol
-                if ( parentNode && (parentNode = parentNode.findParentByTagName(['ul','ol'], true)) ) {
+                // 如果有父元素，且其祖先元素有tag为ul或ol
+                if ( parentNode && (parentNode = parentNode.findAncestorByTagName(['ul','ol'], true)) ) {
                     // 如果父元素的listType与li的listType相同，则略过，即默认添加
                     if ( parentNode.tagName === listType ) {
                     // 如果不同则重新生成一个ul/ol
                     } else {
-                        start.attr('listType',listType);
                         // 修改父节点tagName
                         parentNode.tagName = listType;
                     }
                     return [start];
-                // 如果有父元素，且其祖先元素有tag为ul或ol
-                //} else if( parentNode && parentNode.findParentByTagName( ['ul','ol'], true ) ) {
-                    // TODO
                 // 如果没有父元素为ul/ol
                 } else {
                     var n = new Node();
@@ -452,6 +497,8 @@ var UBBParser = (function () {
                 // block
                 if( Util.isBlock( display ) ) {
                     start.tagName = '#line';
+                    start.attr( '_isBlock', true );
+                    start.attr( '_isWrap', !!$node.children().length || $node.height() > 0 ); // 根据高度或是否有子元素，判断block元素是否是表现为一行
                 }
                 switch( nodeName ) {
                     case 'img':
@@ -499,6 +546,30 @@ var UBBParser = (function () {
                 return end ? [start, end] : start;
             },
             /**
+             * 生成一行
+             *  如果前一节点最后有换行属性showLastNewLine，那本节点就不在前面加换行。
+             *  字符串结束加换行
+             * @param {object} node 节点
+             * @param {string} sonString 字符串
+             * @param {array} re 数组
+             */
+            drawLine: function( node, sonString, re ) {
+                var prev;
+                if ( node.attr('_isWrap') !== false ) {
+                    if ( !node.isFirst() && !node.prev().attr( '_showLastNewLine' ) ) {
+                        re.push('\n');
+                    }
+                    re.push(sonString);
+                    if ( !node.isLast() ) {
+                        re.push('\n');
+                        node.attr( '_showLastNewLine', true );
+                    }
+                } else if( (prev=node.prev()) && (!prev.attr('_isBlock') && prev.tagName !== 'br') ) {
+                    re.push('\n');
+                    node.attr( '_showLastNewLine', true );
+                }
+            },
+            /**
              * 生成每个节点对应的字符串
              * @param {object} node 节点
              * @return {string} 字符串
@@ -507,17 +578,17 @@ var UBBParser = (function () {
                 var re = [];
                 switch( node.tagName ) {
                     case '#line':
-                        var children,
-                            prevTagName;
+                        /*var children,
+                            prevTag;
                         if (node.parent()
-                            && (prevTagName = node.prev().tagName)
-                            && prevTagName !== 'br'
+                            && (prevTag = node.prev())
+                            && prevTag.tagName !== 'br'
                             && (children = node.children())
                             && children.length
                             && children[0].tagName === '#text' ) {
                             re.push('\n');
-                        }
-                        re.push(sonString);
+                        }*/
+                        Util.drawLine( node, sonString, re );
                         break;
                     case '#text':
                         re.push(node.value);
@@ -530,45 +601,43 @@ var UBBParser = (function () {
                         re.push('[/color]');
                         break;
                     case 'li':
-                        re.push(sonString);
-                        re.push('\n');
+                        Util.drawLine( node, sonString, re );
                         break;
                     case 'ul':
-                        if ( node.prev().tagName ) {
-                            re.push('\n');
-                        }
-                        re.push('[ul]\n');
-                        re.push(sonString);
-                        re.push('[/ul]')
+                        Util.drawLine( node, '[ul]\n'+sonString+'\n[/ul]', re );
                         break;
                     case 'ol':
-                        if ( node.prev().tagName ) {
-                            re.push('\n');
-                        }
-                        re.push('[ol]\n');
-                        re.push(sonString);
-                        re.push('[/ol]')
+                        Util.drawLine( node, '[ol]\n'+sonString+'\n[/ol]', re );
                         break;
                     case 'br':
-                        if ( node.next().tagName ) {
+                        var block = node.findAncestorByTagName(['#line','li','ul','ol']);
+                        if ( !node.isFirst( block ) && !node.isLast( block ) ) {
                             re.push('\n');
+                            node.attr( '_showLastNewLine', true );
                         }
                         break;
                     default:
-                        re.push('[');
-                        re.push(node.tagName);
+                        var s = '[';
+                        s += node.tagName;
                         node.eachAttr(function( value, key ) {
-                            re.push(' ');
-                            re.push(key);
-                            re.push('=');
-                            re.push(value);
+                            if ( key.indexOf('_') !== 0 ) {
+                                s += ' ';
+                                s += key;
+                                s += '=';
+                                s += value;
+                            }
                         });
-                        re.push(']');
-                        re.push(node.value);
-                        re.push(sonString);
-                        re.push('[/');
-                        re.push(node.tagName);
-                        re.push(']');
+                        s += ']';
+                        s += node.value;
+                        s += sonString;
+                        s += '[/';
+                        s += node.tagName;
+                        s += ']';
+                        if ( node.attr('_isBlock') ) {
+                            Util.drawLine( node, s, re );
+                        } else {
+                            re.push( s );
+                        }
                         break;
                 }
                 return re.join('');
@@ -639,7 +708,8 @@ var UBBParser = (function () {
 
     return function ( setting ) {
         this.setting = $.extend( {
-                            defaultColor: '#000000'
+                            defaultColor: '#000000',
+                            'line-height': 24
                         }, setting );
         this.HTMLtoUBB = function ( $dom ) {
             var node = parseHtml($dom, null, this.setting);
