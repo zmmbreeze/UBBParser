@@ -628,7 +628,7 @@ var UBBParser = (function () {
                             }
                         });
                         s += ']';
-                        s += node.value;
+                        s += node.value || '';
                         s += sonString;
                         s += '[/';
                         s += node.tagName;
@@ -641,6 +641,27 @@ var UBBParser = (function () {
                         break;
                 }
                 return re.join('');
+            },
+            parseUbbTag: function( tag ) {
+                var node = new Node(),
+                    splited = tag.split(' '),
+                    tmp;
+                node.tagName = splited[0];
+                for( var i=1,l=splited.length; i<l; i++ ) {
+                    tmp = splited[i].split('=');
+                    node.attr( tmp[0], tmp[1] );
+                }
+                return node;
+            },
+            validateUbbTag: function( stack, node, isClose ) {
+                if ( isClose ) {
+                    if ( stack.length === 0 ) {
+                        return false;
+                    }
+                    var lastNode = stack[stack.length-1];
+                    return lastNode && lastNode.tagName !== node.tagName;
+                }
+                return true;
             }
         },
         /**
@@ -690,10 +711,26 @@ var UBBParser = (function () {
             return start;
         },
         rendHtml = function( node ) {
-            
+            console.log( node );
         },
         parseUbb = function( ubb ) {
-            
+            var stack = [],
+                reg = /\[(\/)?([^\]]*)\]/g,
+                node,
+                match;
+            while( match = reg.exec( ubb ) ) {
+                node = Util.parseUbbTag( match[2] );
+                if ( Util.validateUbbTag( stack, node, match[1] ) ) {
+                    stack.push( node );
+                } else {
+                    throw {
+                        lastIndex: reg.lastIndex,
+                        errorNode: node,
+                        stack: stack
+                    };
+                }
+            }
+            // return ;
         },
         rendUbb = function( node, setting ) {
             var re = [],
@@ -716,6 +753,8 @@ var UBBParser = (function () {
             return rendUbb( node, this.setting );
         };
         this.UBBtoHTML = function( ubb ) {
+            var node = parseUbb( ubb );
+            return rendHtml( node );
         };
         this.Node = Node;
     };
