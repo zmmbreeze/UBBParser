@@ -498,7 +498,7 @@ var UBBParser = (function () {
                 if( Util.isBlock( display ) ) {
                     start.tagName = '#line';
                     start.attr( '_isBlock', true );
-                    start.attr( '_isWrap', !!$node.children().length || $node.height() > 0 ); // 根据高度或是否有子元素，判断block元素是否是表现为一行
+                    start.attr( '_isWrap', $node.height() > 0 ); // 根据高度，判断block元素是否是表现为一行
                 }
                 switch( nodeName ) {
                     case 'img':
@@ -713,7 +713,6 @@ var UBBParser = (function () {
                         }, setting );
         this.HTMLtoUBB = function ( $dom ) {
             var node = parseHtml($dom, null, this.setting);
-            console.log( node );
             return rendUbb( node, this.setting );
         };
         this.UBBtoHTML = function( ubb ) {
