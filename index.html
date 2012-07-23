@@ -1,131 +1,125 @@
 <!DOCTYPE HTML>
-<html lang="en-US">
+<html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<title></title>
+    <meta charset="UTF-8">
+    <title>UBB parser</title>
     <style type="text/css">
-        div,p {
-            padding:0;
-            margin:0;
-            line-height:24px;
-        }
-        #source {
-            border: 1px solid #CCC;
-        }
-        ul{
-            padding: 0;
-            margin: 0;
-            border: 1px solid #CCC;
-        }
-        #source ul p, #source ul li {
-            display: list-item;
-            list-style: decimal outside;
-            margin-left: 25px;
-        }
-        #source ul li {
-            list-style-type: circle;
-        }
+    * {
+        margin: 0;
+        padding: 0;
+    }
+    body {
+        margin: 20px;
+    }
+    .t_txt{
+        line-height: 20px;
+        padding: 4px 5px;
+        background-color: #FFF;
+        border: #ddd 1px solid;
+
+        -webkit-box-shadow: 0 2px 0 #f5f5f5 inset;
+        -moz-box-shadow: 0 2px 0 #f5f5f5 inset;
+        box-shadow: 0 2px 0 #f5f5f5 inset;
+
+        -webkit-transition: border linear 0.2s, box-shadow linear 0.2s;
+        -moz-transition: border linear 0.2s, box-shadow linear 0.2s;
+        transition: border linear 0.2s, box-shadow linear 0.2s;
+    }
+    .t_txt[disabled]{
+        background-color: #fbfbfb;
+    }
+    .t_txt:focus{
+        outline: none;
+        border: #87be44 1px solid;
+        -webkit-box-shadow: 0 2px 0 #f5f5f5 inset, 0 0 4px 1px #e8f3db;
+        -moz-box-shadow: 0 2px 0 #f5f5f5 inset, 0 0 4px 1px #e8f3db;
+        box-shadow: 0 2px 0 #f5f5f5 inset, 0 0 4px 1px #e8f3db;
+    }
+    .fl {
+        float: left;
+    }
+
+    ul li {
+        list-style: disc inside;
+        margin-left: 20px;
+    }
+    ol li {
+        list-style: decimal inside;
+        margin-left: 20px;
+    }
+    #html {
+        color: #000;
+    }
     </style>
 </head>
 <body>
-    <div style="float:left;">
-        <h1>HTML：</h1>
-        <div id="source" contenteditable>
-            ======
-            <div>
-                qweqwe
-                <br />
-            </div>
-            ======
-            <div></div>
-            <div></div>
-            <br/>
-            <div></div>
-            <div></div>
-            <p></p>
-            asdasd<br/>
-            <div>asdas</div>
-            <ul>
-                <div>
-                    sadasdad
-                    <li>
-                        <a href="http://www.guokr.com/">这里是一个链接</a>br换行
-                        <br/>ssss
-                    </li>
-                    <li>br结尾<br/></li>
-                    <li><div>XXXX</div></li>
-                    <li>li:asdasd</li>
-                </div>
-                <p>p:<i>asdasd</i></p>
-                <p style="font-weight:bold;">p:asdasd</p>
-            </ul>
-            <div>
-                <div><p>多层嵌套div的文案</p></div>
-            </div>
-            <blockquote>
-                引用的内容：XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-            </blockquote>
-            <p><img class="gui-ubb-flash" data-src="http://youku.com/asd.swf" src="/skin/imgs/flash.png" width="480" height="400">asd</p>
-            <p>内敛图片<img src="http://www.guokr.com/gkimage/jr/y1/zk/jry1zk.jpg">111</p>
-            <p>块级图片<img src="http://www.guokr.com/gkimage/jr/y1/zk/jry1zk.jpg" style="display:block;">111</p>
-            <p>高度为0的块级图片<img src="http://www.guokr.com/gkimage/jr/y1/zk/jry1zk.jpg" style="height:0;">111</p>
-            <p>恩，如果图中表示的是占<span style="color: green;">百分比</span>，那么影响最大的因,<i><b>素很可能</b></i>是这个星座的用户数量。</p>
-            <p>但是绝对<i style="color: red;font-weight:bold;">没有星座</i>那么<b>夸张</b></p>
-            <div>before
-            <p style="display:inline-table;">display:inline-table;</p>
-            after</div>
-            <div>before
-            <p style="display:table;">display:table;</p>
-            after</div>
-            <div>before
-            <p style="display:table-caption;">display:table-caption;</p>
-            after</div>
-            <div>before
-            <p style="display:table-cell;">display:table-cell;</p>
-            after</div>
-            <div>before
-            <p style="display:table-column;">display:table-column;</p>
-            after</div>
-            <div>before
-            <p style="display:table-column-group;">display:table-column-group;</p>
-            after</div>
-            <div>before
-            <p style="display:table-footer-group;">display:table-footer-group;</p>
-            after</div>
-            <div>before
-            <p style="display:table-header-group;">display:table-header-group;</p>
-            after</div>
-            <div>before
-            <p style="display:table-row;">display:table-row;</p>
-            after</div>
-            <div>before
-            <p style="display:table-row-group;">display:table-row-group;</p>
-            after</div>
-        </div>
-    </div>
-    <div style="float:right;">
-        <h1>Result:</h1>
-        <textarea id="view" rows="50" cols="100"></textarea>
-    </div>
-    <div style="clear:both;"></div>
-    <div style="float:left;">
-        <h1>UBB:</h1>
-        <textarea id="source2" name="50" rows="100" cols="30">
-[link href=http://www.guokr.com/][color=#0000ee]这里是一个链接[/color][/link]
-        </textarea>
-    </div>
-    <div style="float:right;">
-        <h1>Result:</h1>
-        <textarea id="view2" rows="50" cols="100"></textarea>
-    </div>
-	<script src="src/jquery.1.7.1.min.js"></script>
-	<script src="src/ubb.js"></script>
-	<script>
-        $(window).load(function() {
-            var parser = new UBBParser();
-            $('#view').text( parser.HTMLtoUBB( $('#source') ) );
-            $('#source2').text( parser.UBBtoHTML( $('#source2').val() ) );
-        });
-	</script>
+<textarea id="ubb" name="" rows="30" cols="80" class="fl t_txt">
+[blockquote]引用@玉子桑 的话：那两杯奇怪的东西是神马！！！
+谁来解释下上边的白斑！！！[/blockquote]
+[url href=http://www.guokr.com/i/0014169607/]玉子
+桑[/url]serfsdfsd
+[bold][color=#999999]食品科学硕士，果壳[/color][/bold]
+
+<h1>测试encode html</h1>
+
+[image]http://www.guokr.com/skin/imgs/3-logo.png[/image]
+[ref]http://127.0.0.1:8000/example/UBB.html[/ref]
+
+[italic]斜体[bold]加粗 && 斜体[/bold]斜体[/italic]
+
+[ul][bold]
+这是第一条[/bold]
+可能的第二条
+
+这里是第四条
+
+
+[bold]最后一条
+[/bold][/ul]
+[ol]
+沙发
+板凳
+地板
+
+
+什么都没有了T T
+[/ol]
+[italic]
+斜
+
+体
+[bold]
+加粗 && 斜体
+[/bold]
+斜体
+[/italic]
+
+[BOLD]大小写无关[/bold]
+[bold]大小写无关[/BOLD]
+[BOLD]大小写无关[/BOLD]
+</textarea>
+<ul class="fl">
+  <li><button id="UBBtoHTML">UBBtoHTML</button></li>
+  <li><button id="HTMLtoUBB">HTMLtoUBB</button></li>
+  <li><button id="fixUBB">fixUBB</button></li>
+</ul>
+<div id="html" class="fl t_txt" style=""></div>
+</dd>
+    <script src="src/jquery.1.7.1.min.js"></script>
+    <script src="src/ubb.js"></script>
+    <script>
+    var parser = new UBB();
+        $ubb = $('#ubb'),
+        $html = $('#html');
+    $('#UBBtoHTML').click(function() {
+        $html.html(parser.UBBtoHTML($ubb.val()));
+    });
+    $('#HTMLtoUBB').click(function() {
+        $ubb.val(parser.HTMLtoUBB($html));
+    });
+    $('#fixUBB').click(function() {
+        $ubb.val(parser.fixUBB($ubb.val()));
+    });
+    </script>
 </body>
 </html>

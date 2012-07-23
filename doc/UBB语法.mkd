@@ -1,0 +1,262 @@
+UBB语法
+=============
+
+UBB的解析
+-------------
+
+ width="480" height="400"
+      
+      一个有效的UBB节点结构分为三个部分,示例如下：
+          
+         [url href=http://www.guokr.com"]果壳网[/url]
+
+         a. 起始标签：[url href=http://www.guokr.com]
+         b. 内容块：果壳网
+         c. 结束标签：[/url]
+
+         其他关键部分：
+         a. 标签名：/[a-bA-Z]+/, 有大小写无关的英文字母组成
+         b. 属性： “ href=http://www.guokr.com”，起始标签中去掉"["、"]"和标签名的其他部分。注意属性和标签名的分界线可以是任意非英文字母，例如：‘[color=#CCC]’的属性是“=#CCC”；
+
+2. 标签的特性
+
+      标签的特性有三个：
+
+          a. priority优先级：值为正整数，优先级高的标签可以包含优先级低的标签，优先级相同则可以互相包含
+          b. canWrap是否可换行：bool值，表示标签内容块是否可以换行
+          c. isBlock是否是块级元素：bool值，表示标签转换成HTML元素后该HTML元素是否是block元素
+
+      稍后再讲这三个特性的作用。
+
+<table>
+<thead>
+    <tr>
+        <th>标签名</th>
+        <th>属性</th>
+        <th>priority</th>
+        <th>canWrap</th>
+        <th>isBlock</th>
+        <th>样例</th>
+        <th>HTML</th>
+    </tr>
+</thead>
+<tbody>
+    <tr>
+        <td>bold</td>
+        <td>无</td>
+        <td>2</td>
+        <td>false</td>
+        <td>false</td>
+        <td>[bold]加粗[/bold]</td>
+        <td>&lt;b&gt;加粗&lt;/b&gt;</td>
+    <tr>
+    <tr>
+        <td>italic</td>
+        <td>无</td>
+        <td>2</td>
+        <td>false</td>
+        <td>false</td>
+        <td>[italic]斜体[/italic]</td>
+        <td>&lt;i&gt;加粗&lt;/i&gt;</td>
+    <tr>
+    <tr>
+        <td>color</td>
+        <td>=#000</td>
+        <td>2</td>
+        <td>false</td>
+        <td>false</td>
+        <td>[color=blue]蓝色[/color]</td>
+        <td>&lt;span style="color:blue;"&gt;蓝色&lt;/span&gt;</td>
+    <tr>
+    <tr>
+        <td>url</td>
+        <td> href=http://www.guokr.com/</td>
+        <td>2</td>
+        <td>false</td>
+        <td>false</td>
+        <td>[url href=http://www.guokr.com]果壳网[/url]</td>
+        <td>&lt;a href="http://www.guokr.com" target="_blank"&gt;果壳网&lt;/a&gt;</td>
+    <tr>
+    <tr>
+        <td>image</td>
+        <td>无</td>
+        <td>1</td>
+        <td>false</td>
+        <td>false</td>
+        <td>[image]http://www.guokr.com/skin/imgs/3-logo.png[/image]</td>
+        <td>&lt;img src="http://www.guokr.com/skin/imgs/3-logo.png"/&gt;</td>
+    <tr>
+    <tr>
+        <td>video</td>
+        <td>无</td>
+        <td>1</td>
+        <td>false</td>
+        <td>false</td>
+        <td>[video]http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf[/video]</td>
+        <td>前端预览：&lt;img class="gui-ubb-flash" data-src="http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf" src="/skin/imgs/flash.jpg" width="480" height="400"/&gt;<br/>
+后端生成：&lt;embed src="http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf" type="application/x-shockwave-flash" allowscriptaccess="sameDomain" allowfullscreen="true" wmode="transparent" width="480" height="400"&gt;
+        </td>
+    <tr>
+    <tr>
+        <td>flash</td>
+        <td>无</td>
+        <td>1</td>
+        <td>false</td>
+        <td>false</td>
+        <td>[flash]http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf[/flash]</td>
+        <td>前端预览：&lt;img class="gui-ubb-flash" data-src="http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf" src="/skin/imgs/flash.jpg" width="480" height="400"/&gt;<br/>
+后端生成：&lt;embed src="http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf" type="application/x-shockwave-flash" allowscriptaccess="sameDomain" allowfullscreen="true" wmode="transparent" width="480" height="400"&gt;
+        </td>
+    <tr>
+    <tr>
+        <td>blockquote</td>
+        <td>无</td>
+        <td>3</td>
+        <td>true</td>
+        <td>true</td>
+        <td>[blockquote]引用别人的评论[/blockquote]</td>
+        <td>&lt;blockquote&gt;引用别人的评论&lt;/blockquote&gt;
+        </td>
+    <tr>
+    <tr>
+        <td>ul</td>
+        <td>无</td>
+        <td>3</td>
+        <td>true</td>
+        <td>true</td>
+        <td>[ul]<br/>
+第一条<br/>
+第二条<br/>
+[/ul]</td>
+        <td>&lt;ul&gt;<br/>
+&lt;li&gt;第一条&lt;/li&gt;<br/>
+&lt;li&gt;第二条&lt;/li&gt;<br/>&lt;/ul&gt;
+        </td>
+    <tr>
+    <tr>
+        <td>ol</td>
+        <td>无</td>
+        <td>3</td>
+        <td>true</td>
+        <td>true</td>
+        <td>[ol]<br/>
+第一条<br/>
+第二条<br/>
+[/ol]</td>
+        <td>&lt;ol&gt;<br/>
+&lt;li&gt;第一条&lt;/li&gt;<br/>
+&lt;li&gt;第二条&lt;/li&gt;<br/>&lt;/ol&gt;
+        </td>
+    <tr>
+    <tr>
+        <td>ref</td>
+        <td>无</td>
+        <td>1</td>
+        <td>false</td>
+        <td>true</td>
+        <td>[ref]引用别人的评论[/ref]</td>
+        <td>前端预览：<br/>&lt;div class="gui-ubb-ref"&gt;http://www.guokr.com/article/176586/&lt;/div&gt;<br/>
+后端生成：<br/>&lt;div class="gui-ubbv-ref-bd"&gt;<br/>
+&lt;div class="gui-ubbv-ref-bd"&gt;<br/>
+&lt;a title="高潮来了才会喊？" target="_blank" href="/article/176586/" class="gui-ubbv-ref-bd-pic"&gt;<br/>
+&lt;img width="110" height="86" alt="高潮来了才会喊？" src="http://img1.guokr.com/gkimage/hx/w3/9d/hxw39d.png"&gt;
+&lt;/a&gt;<br/>
+&lt;h3&gt;&lt;a target="_blank" href="/article/176586/"&gt;高潮来了才会喊？&lt;/a&gt;&lt;/h3&gt;<br/>
+&lt;span class="gui-ubbv-ref-bd-info"&gt;评论&nbsp;151&nbsp;&nbsp;｜&nbsp;&nbsp;推荐&nbsp;15&lt;/span&gt;<br/>
+&lt;p class="gui-ubbv-ref-bd-desc"&gt;人们常说，高潮来了你就喊！女性叫床和性高潮之间真的是联系在一起的吗？也许你想太多了！&nbsp;&lt;a target="_blank" href="/article/176586/"&gt;查看全文&lt;/a&gt;&lt;/p&gt;<br/>
+&lt;/div&gt;<br/>
+&lt;/div&gt;
+        </td>
+    <tr>
+</tbody>
+</table>
+
+3. 换行处理
+
+      换行使用<br/\>标签替换;
+
+      当canWrap为true时，标签的内容块可以换行。并且此标签转换成HTML之后一定是block元素。当canWrap为false时，标签的内容块不可以换行，并会进行容错处理（稍后再解释）。注意canWrap为false并不意味着该标签转换后的HTML元素一定不是block元素，例如ref标签的canWrap为false，但是转换后的HTML元素是DIV（block元素）。
+
+      当isBlock为true时，紧随标签之后的换行不会被转换成<br/\>。以此避免如下情况：
+
+           ubb为：
+               [ref]http://www.guokr.com/post/263028/[/ref]
+               12
+
+           结果为：
+![效果图](./etc001.png)
+
+4. 转义
+
+     反斜杠“\”为转义符号，即“\[”或“\]”会被转义显示成“[”或“]”。
+
+     例如：\[bold\]aaa[/bold]
+     输出显示结果为\[bold\]aaa
+
+
+5. 容错处理
+
+    原则是：尽量保留开始标签，自动补全结束标签。结束标签不匹配则丢弃。
+
+    a. canWrap为false时，标签内容部分包含换行
+
+          解决方案，拆分并逐行自动补全。例如：
+
+              [bold]aaa
+              bbbb[/bold]
+
+          转换成：
+
+              [bold]aaa[/bold]
+              [bold]bbbb[/bold]
+
+    b. 标签不匹配情况
+
+         情况一：[bold]aaaa
+         结果：[bold]aaaa[/bold]
+         自动补全结束标签
+
+         情况二：aaaa[/bold]
+         结果：aaaa
+         抛弃多余的结束标签
+
+         情况三：[bold][italic]aaaa[/bold]bbb[/italic]
+         结果：
+             步骤一：[bold][italic]aaaa[/italic]
+             找到未匹配标签bold，自动补全italic结束标签
+             步骤二：[bold][italic]aaaa[/italic][/bold][italic]bbb
+             [/bold]找到标签匹配，并将前一个自动比和的[italic]标签同时放到[/bold]之后
+             步骤三：[bold][italic]aaaa[/italic][/bold][italic]bbb[/italic]
+             [/italic]找到标签匹配
+
+         情况四：[bold]aaaa[/bold][italic]ccc[/italic]bbb[/bold]
+         结果：[bold]aaaa[/bold][italic]ccc[/italic]bbb
+         抛弃无法匹配的结束标签
+
+         情况五：[bold][italic]aaaa[/bold]bbb
+         结果：
+             步骤一：[bold][italic]aaaa[/italic]
+             找到未匹配标签bold，自动补全italic结束标签
+             步骤二：[bold][italic]aaaa[/italic][/bold][italic]bbb
+             [/bold]找到标签匹配，并将前一个自动比和的[italic]标签同时放到[/bold]之后
+             步骤三：[bold][italic]aaaa[/italic][/bold][italic]bbb[/italic]
+             最后自动闭合剩余的
+
+    c. 优先级低的标签包含优先级高的标签时
+
+          解决方案，在高标签前自动补全低标签。例如：
+
+              [bold][ul]
+              aaa
+              bbbb
+              [/ul]ccc[/bold]
+
+          转换成：
+
+              [bold][/bold][ul][bold][/bold]
+              [bold]aaa[/bold]
+              [bold]bbbb[/bold]
+              [bold][/bold][/ul][bold]ccc[/bold]
+
+          步骤一：ul开始标签优先级大于bold开始标签，于是自动补全bold结束标签；
+          步骤二：bold结束标签,找到已匹配标签bold，自动将前一个bold开始标签同时做为此结束标签的开始
