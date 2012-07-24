@@ -16,31 +16,56 @@ var UBB = (function () {
     var ubbTagNameReg = /\[(\/)?([a-zA-Z]+)/,
         tagsParser = {
             bold: {
-                parseHTML: function(nodeName, node, songString) {
+                /**
+                 * parse html node to UBB text
+                 * @param {string} nodeName nodeName
+                 * @param {object} node jquery object
+                 * @param {string} sonString the ubb text of node's children
+                 * @param {object} setting
+                 * @return {string} ubb text of node and it's children
+                 */
+                parseHTML: function(nodeName, node, sonString) {
                     if (nodeName === '#text') {
                         var container = node.parent();
                         if (Util.isBold(container.css('font-weight'))) {
-                            return '[bold]'+songString+'[/bold]';
+                            return '[bold]'+sonString+'[/bold]';
                         }
                     }
                 },
+                /**
+                 * parse UBB text to HTML text
+                 * @param {object} tag object represent ubb tag.
+                 *                     eg:
+                 *                         start tag: {name: 'url', attr:' href=http://guokr.com' };
+                 *                         end tag: {isClose: false, name: 'url', attr:' href=http://guokr.com' };
+                 *                         string tag: 'This is a text'; (It's not contains '\n')
+                 *                         \n tag: '\n'.
+                 * @param {number} i index of this tag in tag list(array)
+                 * @param {array} tags tag list
+                 * @param {object} setting
+                 * @return {string} html text
+                 */
                 parseUBB: function(tag) {
                     return tag.isClose ? '</b>' : '<b>';
                 },
-                // 值代表优先级，优先级高的可以包含优先级低的标签，相同则可以互相包含，必须为正整数
+                // positive integer.
+                // Tag with bigger priority can contians small one.
+                // If equal, then they can contains each other.
                 priority: 2,
-                // 是否是行内标签, 1表示可以内部的字符串换行,0表示不能换行但要补全
+                // bool.
+                // If true, then this tag can contains '\n'.
                 canWrap: 0,
-                // 转换成html后是否是block元素，如果是则紧随其后的换行不会转换成br
+                // bool.
+                // If true, then the '\n' right after this tag should be ignore.
                 isBlock: 0,
                 noAttr: 1
             },
             italic: {
-                parseHTML: function(nodeName, node, songString) {
+                parseHTML: function(nodeName, node, sonString) {
                     if (nodeName === '#text') {
                         var container = node.parent();
                         if (Util.isItalic(container.css('font-style'))) {
-                            return '[italic]'+songString+'[/italic]';
+                            return '[italic]'+sonString+'[/italic]';
                         }
                     }
                 },
@@ -53,13 +78,13 @@ var UBB = (function () {
                 noAttr: 1
             },
             color: {
-                parseHTML: function(nodeName, node, songString, setting) {
+                parseHTML: function(nodeName, node, sonString, setting) {
                     if (nodeName === '#text') {
                         var color,
                             container = node.parent();
                         color = Util.RGBtoHEX(container.css('color'));
                         if (color && color !== setting.defaultColor && !(container[0].nodeName.toLowerCase() === 'a' && color === setting.linkDefaultColor)) {
-                            return '[color='+color+']'+songString+'[/color]';
+                            return '[color='+color+']'+sonString+'[/color]';
                         }
                     }
                 },
@@ -72,9 +97,9 @@ var UBB = (function () {
                 noAttr: 0
             },
             url: {
-                parseHTML: function(nodeName, node, songString) {
+                parseHTML: function(nodeName, node, sonString) {
                     if (nodeName === 'a') {
-                        return '[url href='+node.attr('href')+']'+songString+'[/url]';
+                        return '[url href='+node.attr('href')+']'+sonString+'[/url]';
                     }
                 },
                 parseUBB: function(tag, i, tags) {
@@ -179,9 +204,9 @@ var UBB = (function () {
                 noAttr: 1
             },
             blockquote: {
-                parseHTML: function(nodeName, node, songString) {
+                parseHTML: function(nodeName, node, sonString) {
                     if (nodeName === 'blockquote') {
-                        return '[blockquote]'+songString+'[/blockquote]';
+                        return '[blockquote]'+sonString+'[/blockquote]';
                     }
                 },
                 parseUBB: function(tag) {
@@ -193,15 +218,16 @@ var UBB = (function () {
                 noAttr: 1
             },
             ul: {
-                parseHTML: function(nodeName, node, songString) {
+                parseHTML: function(nodeName, node, sonString) {
                     if (nodeName === 'ul') {
-                        return '[ul]\n'+songString+'\n[/ul]';
+                        return '[ul]\n'+sonString+'\n[/ul]';
                     }
-                    if (nodeName === 'li') {
+                    // in IE <= 7, node is block
+                    if (nodeName === 'li' && !Util.isBlock(node)) {
                         var parent = node.parent()[0];
                         // if its parent is ul and it's not the last node
                         if (parent && parent.nodeName.toLowerCase() === 'ul' && node.next().length) {
-                            return songString + '\n';
+                            return sonString + '\n';
                         }
                     }
                 },
@@ -241,15 +267,16 @@ var UBB = (function () {
                 noAttr: 1
             },
             ol: {
-                parseHTML: function(nodeName, node, songString) {
+                parseHTML: function(nodeName, node, sonString) {
                     if (nodeName === 'ol') {
-                        return '[ol]\n'+songString+'\n[/ol]';
+                        return '[ol]\n'+sonString+'\n[/ol]';
                     }
-                    if (nodeName === 'li') {
+                    // in IE <= 7, node is block
+                    if (nodeName === 'li' && !Util.isBlock(node)) {
                         var parent = node.parent()[0];
                         // if its parent is ul and it's not the last node
                         if (parent && parent.nodeName.toLowerCase() === 'ol' && node.next().length) {
-                            return songString + '\n';
+                            return sonString + '\n';
                         }
                     }
                 },
@@ -289,9 +316,9 @@ var UBB = (function () {
                 noAttr: 1
             },
             ref: {
-                parseHTML: function(nodeName, node, songString) {
+                parseHTML: function(nodeName, node, sonString) {
                     if (nodeName === 'div' && node[0].className === 'gui-ubb-ref') {
-                        return '[ref]'+songString+'[/ref]';
+                        return '[ref]'+sonString+'[/ref]';
                     }
                 },
                 parseUBB: function(tag, i, tags) {
@@ -309,7 +336,9 @@ var UBB = (function () {
         startTagCache = {},
         Util = {
             /**
-             * 判断display样式是否是换行的样式
+             * if node is block a line.
+             * @param {object} node jquery object
+             * @return {boolean}
              */
             isBlock: function(node) {
                 return ~$.inArray( node.css('display'), [
@@ -324,7 +353,9 @@ var UBB = (function () {
                 ]);
             },
             /**
-             * 判断一个样式是否为bold
+             * if fontWeight is bold
+             * @param {string} fontWeight
+             * @return {boolean}
              */
             isBold: function(fontWeight) {
                 var number = parseInt(fontWeight, 10);
@@ -335,15 +366,17 @@ var UBB = (function () {
                 }
             },
             /**
-             * 判断一个样式是否为bold
+             * if fontStyle is italic
+             * @param {string} fontStyle
+             * @return {boolean}
              */
-            isItalic: function( fontWeight ) {
-                return (/^(italic|oblique)$/).test( fontWeight );
+            isItalic: function(fontStyle) {
+                return (/^(italic|oblique)$/).test(fontStyle);
             },
             /**
-             * 将颜色值转行成Hex方式展示
-             * @param {string} oldColor
-             * @return {string} hex格式的颜色值
+             * change RGB to HEX
+             * @param {string} oldColor rbg color
+             * @return {string} hex color
              */
             RGBtoHEX: function ( oldColor ) {
                 var i,
@@ -373,11 +406,11 @@ var UBB = (function () {
                 return str.replace(/(\[|\])/g, '\\$1');
             },
             /**
-             * 解析单个jquery object为Node 对象
-             * @param {object} $node jquery object
-             * @param {object} currentNode 当前解析完成的节点(即父节点)
-             * @param {object} setting 配置
-             * @return {object/array} 返回解析之后的节点，如果这个节点不需要则返回空，如果是一个dom解析成多个节点则返回数组:[start, end]
+             * parse jquery node to ubb text
+             * @param {object} node jquery object
+             * @param {string} sonString the ubb text of node's children
+             * @param {object} setting
+             * @return {string} ubb text of node and it's children
              */
             parseNode: function(node, sonString, setting) {
                 var tagName, tagParser, tmp, addNewLineLater,
@@ -451,9 +484,22 @@ var UBB = (function () {
                 }
                 return startTag;
             },
+            /**
+             * can father contains son
+             * @param {object} father father tag
+             * @param {object} son son tag
+             * @param {object} ubbTagsPriority prioritys for all tags
+             * @return {boolean}
+             */
             canContains: function(father, son, ubbTagsPriority) {
                 return ubbTagsPriority[father.name] >= ubbTagsPriority[son.name];
             },
+            /**
+             * push tags into two stack reversed
+             * @param {array} tags tags to be push
+             * @param {array} stack1
+             * @param {array} stack2
+             */
             pushTagsReverse: function(tags, stack1, stack2) {
                 if (tags) {
                     var t, i;
@@ -464,8 +510,14 @@ var UBB = (function () {
                     }
                 }
             },
-            pushOpenUbbTag: function(tag, unMatchedOpenTags, stack, ubbTagsPriority) {
-                // can contains
+            /**
+             * push open ubb tag into stack
+             * @param {array} unMatchedOpenTags
+             * @param {array} stack
+             * @param {object} tag tags to be push
+             * @param {object} ubbTagsPriority
+             */
+            pushOpenUbbTag: function(unMatchedOpenTags, stack, tag, ubbTagsPriority) {
                 var i, t, autoClosedTags;
                 for (i = unMatchedOpenTags.length-1; i>=0; i--) {
                     t = unMatchedOpenTags[i];
@@ -473,9 +525,6 @@ var UBB = (function () {
                     if (Util.canContains(t, tag, ubbTagsPriority)) {
                         break;
                     } else {
-                        // 记录此标签,因为不能包含而自动关闭的标签
-                        // tag.autoClosedTags = tag.autoClosedTags || [];
-                        // tag.autoClosedTags.push(unMatchedOpenTags.pop());
                         autoClosedTags = autoClosedTags || [];
                         autoClosedTags.push(unMatchedOpenTags.pop());
                         stack.push(Util.getCloseUbbTag(t));
@@ -486,6 +535,12 @@ var UBB = (function () {
                 Util.pushTagsReverse(autoClosedTags, unMatchedOpenTags, stack);
                 autoClosedTags = null;
             },
+            /**
+             * push close ubb tag into stack
+             * @param {array} unMatchedOpenTags
+             * @param {array} stack
+             * @param {object} closeTag tags to be push
+             */
             pushCloseUbbTag: function(unMatchedOpenTags, stack, closeTag) {
                 var tag, i, autoClosedTags, t, l;
                 for (i = unMatchedOpenTags.length-1; i>=0; i--) {
@@ -510,18 +565,35 @@ var UBB = (function () {
                 }
                 // no match
             },
+            /**
+             * push ubb tags into stack
+             * @param {array} stack
+             * @param {object} tags tags to be push
+             */
             pushPrefixUbbTag: function(stack, tags) {
                 var i = tags.length-1;
                 for (; i>=0; i--) {
                     stack.push(tags[i]);
                 }
             },
+            /**
+             * push ubb close tags into stack reserved
+             * @param {array} stack
+             * @param {object} tags tags to be push
+             */
             pushSuffixUbbTag: function(stack, tags) {
                 var i,l;
                 for (i=0,l=tags.length; i<l; i++) {
                     stack.push(Util.getCloseUbbTag(tags[i]));
                 }
             },
+            /**
+             * push '\n' into stack
+             * @param {array} openTags unMatchedOpenTags
+             * @param {array} stack
+             * @param {string} textTag '\n' tag
+             * @param {object} wrapUbbTags canWrap value
+             */
             pushLineUbbTag: function(openTags, stack, textTag, wrapUbbTags) {
                 var i, tag, inlineTags, j;
 
@@ -548,6 +620,11 @@ var UBB = (function () {
                     stack.push('\n');
                 }
             },
+            /**
+             * html encode
+             * @param {string} str html string
+             * @return {string} encoded html string
+             */
             htmlEncode: function (str) {
                 if (str) {
                     str = str.replace(/&/igm, '&amp;');
@@ -557,13 +634,23 @@ var UBB = (function () {
                 }
                 return str;
             },
+            /**
+             * scan ubb text into tag list
+             * @param {string} text ubb text
+             * @param {object} ubbTagsPriority
+             * @param {object} wrapUbbTags
+             * @return {array} tag list
+             */
             scanUbbText: function(text, ubbTagsPriority, wrapUbbTags) {
                 // encode html
                 text = Util.htmlEncode(text);
                 text = text.replace(/\r\n/g, '\n'); // for IE hack
                 var c, r, tagName, tag, prevOpenTag, attr, isClose,
+                    // state value represent next char not be escape
                     NOESCAPE = 0,
+                    // state value represent next char should be escape
                     ESCAPE = 1,
+                    // state value
                     state = NOESCAPE,
                     j = 0,
                     i = 0,
@@ -615,7 +702,7 @@ var UBB = (function () {
                                     Util.pushCloseUbbTag(unMatchedOpenTags, stack, tag);
                                 // open
                                 } else {
-                                    Util.pushOpenUbbTag(tag, unMatchedOpenTags, stack, ubbTagsPriority);
+                                    Util.pushOpenUbbTag(unMatchedOpenTags, stack, tag, ubbTagsPriority);
                                 }
                             // not tag
                             } else {
@@ -653,6 +740,13 @@ var UBB = (function () {
                 return stack;
             }
         },
+        /**
+         * parse jquery node into html
+         * @param {object} node jquery object
+         * @param {object} setting
+         * @param {object} parent jquery object
+         * @return {string} ubb text
+         */
         parseHtml = function(node, setting, parent) {
             var i,l,
                 re = [],
@@ -668,10 +762,10 @@ var UBB = (function () {
             }
         },
         /**
-         * 解析ubb string为Node 对象
+         * parse ubb text into html text
          * @param {string} ubb
          * @param {object} setting 配置
-         * @param {string} 解析完成的节点
+         * @return {string} html text
          */
         parseUbb = function(ubb, setting) {
             var i, l, tag, nextTag,
@@ -701,10 +795,11 @@ var UBB = (function () {
             return str;
         },
         /**
-         * 处理ubb string，修复错误标签
+         * auto complete ubb string
+         * fix error placed tags
          * @param {string} ubb
-         * @param {object} setting 配置
-         * @param {string} 解析完成的节点
+         * @param {object} setting
+         * @return {string} fixed ubb string
          */
         fixUbb = function(ubb, setting) {
             var i, l, tag, nextTag,
@@ -724,14 +819,19 @@ var UBB = (function () {
 
     /**
      *  var ubbParser = new UBB();
-     *  @param {object} setting 设置
+     *  @param {object} setting
      */
     function UBB(setting) {
         this.setting = $.extend({
+                            // color of all text element
                             defaultColor: '#000000',
+                            // color of a elment
                             linkDefaultColor: '#006699',
+                            // if keep white space in html text when converting
                             keepWhiteSpace: true,
+                            // if keep new line space in html text when converting
                             keepNewLine: false,
+                            // flash image to show
                             flashImage: '/skin/imgs/flash.png'
                        }, setting);
         this.setting.tags = $.extend(tagsParser, this.setting.tags);
@@ -745,20 +845,26 @@ var UBB = (function () {
             setting.wrapUbbTags[k] = v.canWrap;
         }
     }
+    UBB.Util = Util;
     /**
-     * @param {object} $dom jquery对象节点
-     * @return {string} ubb字符串
+     * @param {object} $dom jquery
+     * @return {string} ubb text
      */
     UBB.prototype.HTMLtoUBB = function ($dom) {
         return parseHtml($dom, this.setting);
     };
     /**
-     * @param {string} ubb 字符串
-     * @return {string} html字符串
+     * @param {string} ubb text
+     * @return {string} html text
      */
     UBB.prototype.UBBtoHTML = function(ubb) {
         return parseUbb(ubb, this.setting);
     };
+    /**
+     * fix error ubb text
+     * @param {string} ubb text
+     * @return {string} fixed ubb text
+     */
     UBB.prototype.fixUBB = function(ubb) {
         return fixUbb(ubb, this.setting);
     };
