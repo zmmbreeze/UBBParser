@@ -137,6 +137,18 @@ bbbb\n\
 [bold]aaa[/bold]\n\
 [bold]bbbb[/bold]\n\
 [bold][/bold][/ul][bold]ccc[/bold]');
+            re = ubb.fixUBB('[bold][italic][ul]\n\
+aaa\n\
+bbbb\n\
+[/ul]ccc[/italic][/bold]');
+            expect(re).toEqual('[bold][italic][/italic][/bold][ul][bold][italic][/italic][/bold]\n\
+[bold][italic]aaa[/italic][/bold]\n\
+[bold][italic]bbbb[/italic][/bold]\n\
+[bold][italic][/italic][/bold][/ul][bold][italic]ccc[/italic][/bold]');
+            re = ubb.fixUBB('[bold]bbb[ref]aaa[/ref]ccc[/bold]');
+            expect(re).toEqual('[bold]bbb[/bold][ref]aaa[/ref][bold]ccc[/bold]');
+            re = ubb.fixUBB('[bold][italic]bbb[ref]aaa[/ref]ccc[/italic][/bold]');
+            expect(re).toEqual('[bold][italic]bbb[/italic][/bold][ref]aaa[/ref][bold][italic]ccc[/italic][/bold]');
         });
     });
 

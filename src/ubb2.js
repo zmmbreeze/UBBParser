@@ -10,316 +10,55 @@
 /*jshint undef:true, browser:true, noarg:true, curly:true, regexp:true, newcap:true, trailing:false, noempty:true, regexp:false, strict:true, evil:true, funcscope:true, iterator:true, loopfunc:true, multistr:true, boss:true, eqnull:true, eqeqeq:false, undef:true */
 /*global $:false */
 
-var Node = (function() {
-    'use strict';
-    if ( !Object.create ) {
-        Object.create = function (o) {
-            if (arguments.length > 1) {
-                throw new Error('Object.create implementation only accepts the first parameter.');
-            }
-            function F() {}
-            F.prototype = o;
-            return new F();
-        };
-    }
-    /**
-     * 中间格式node节点的格式
-     */
-    function Node() {
-        this.isNode = true;
-        /*
-        this.tagName = null;        // 标签名
-        this.value = null;          // 值
-        this._attrs = null;         // 属性map;
-        this._parent = null;        // 父节点
-        this._children = null;      // 子节点数组;
-        */
-    }
-    Node.prototype.attr = function( key, value ) {
-        this._attrs = this._attrs || {};
-        if ( typeof value !== 'undefined' ) {
-            this._attrs[key] = value;
-            return this;
-        } else {
-            return this._attrs[key];
-        }
-    };
-    Node.prototype.eachAttr = function( iterator, context ) {
-        for(var key in this._attrs) {
-            if( this._attrs.hasOwnProperty( key ) ) {
-                iterator.call( context, this._attrs[key], key, this._attrs );
-            }
-        }
-        return this;
-    };
-    Node.prototype.parent = function() {
-        return this._parent;
-    };
-    Node.prototype.children = function() {
-        // clone一个新的数组，避免对原子节点数组的修改
-        return this._children ? this._children.slice(0) : [];
-    };
-    /**
-     * 将指定的节点添加为当前节点的最后一个子节点
-     * @param {object} node 被指定的节点
-     */
-    Node.prototype.append = function( node ) {
-        if( node._parent ) {
-            throw 'Append: node has parent，can‘t be appended again!';
-        }
-        this._children = this._children || [];
-        node._parent = this;
-        this._children.push( node );
-        return this;
-    };
-    /**
-     * 将指定的节点插入到当前节点子节点中的指定位置
-     * @param {object} node 节点
-     * @param {number} offset 位置
-     * @param {object} 当前节点
-     */
-    Node.prototype.insertChild = function( node, offset ) {
-        this._children = this._children || [];
-        if ( offset < 0 || this._children.length > offset ) {
-            throw 'InsertChild: Offset is out of range!';
-        }
-        this._children.splice( offset, 0, node );
-        return this;
-    };
-    /**
-     * 把当前节点作为指定节点的最后一个子元素，并将指定节点插入到当前节点的原位置
-     * @param {object} node 节点
-    Node.prototype.wrap = function( node ) {
-        var oldParent = this._parent;
-        if ( oldParent ) {
-            var oldIndex = this.getIndex();
-            this.detach();
-            node.append( this );
-            this.oldParent.insertChild( node, oldIndex );
-        }
-        return this;
-    };
-     */
-    /**
-     * 将当前的节点插入到指定节点的后面
-     * @param {object} node 节点
-     * @param {object} 当前节点
-     */
-    Node.prototype.insertAfter = function( node ) {
-        if ( this._parent ) {
-            throw 'InsertAfter: Node has a parent!';
-        }
-        if ( !node._parent ) {
-            throw 'InsertAfter: Target node has no _parent';
-        }
-        node._parent.insertChild( node, node.getIndex()+1 );
-        return this;
-    };
-    /**
-     * 将当前的节点插入到指定节点的前面
-     * @param {object} node 节点
-     * @param {object} 当前节点
-     */
-    Node.prototype.insertBefore = function( node ) {
-        if ( this._parent ) {
-            throw 'InsertBefore: Node has a parent!';
-        }
-        if ( !node._parent ) {
-            throw 'InsertBefore: Target node has no parent';
-        }
-        node._parent.insertChild( node, node.getIndex() );
-        return this;
-    };
-    /**
-     * 将当前节点从父节点中移除
-     */
-    Node.prototype.detach = function() {
-        var index = this.getIndex();
-        if ( !~index ) {
-            return;
-        }
-        this._parent._children.splice( index, 1 );
-        this._parent = null;
-    };
-    /**
-     * 将当前节点的所有子节点移除
-     */
-    Node.prototype.detachChildren = function() {
-        var children = this.children(),
-            i = 0,
-            l = children.length;
-        if ( children.length ) {
-            for( ; i<l; i++ ) {
-                children[i].detach();
-            }
-        }
-    };
-    /**
-     * 获取当前节点在父节点中的排位
-     * @param {number} 排位,如果没有父节点则返回-1
-     */
-    Node.prototype.getIndex = function() {
-        if ( !this._parent ) {
-            return -1;
-        }
-        return this._parent.indexOf(this);
-    };
-    /**
-     * 获取指定子节点在当前节点子节点中的排位
-     * @param {object} node 指定节点
-     * @return {number} 排位,不是其子节点则返回-1
-     */
-    Node.prototype.indexOf = function( node ) {
-        if ( !this._children ) {
-            return -1;
-        }
-        if ( this._children.indexOf ) {
-            return this._children.indexOf( node );
-        } else {
-            for ( var i=0,l=this._children.length; i<l; i++ ) {
-                if ( this._children[i] === node ) {
-                    return this._children[i];
-                }
-            }
-            return -1;
-        }
-    };
-    /**
-     * 返回同一个深度中的前一个节点
-     * @param {object} 节点
-     */
-    Node.prototype.prev = function() {
-        var prev = this.getIndex() - 1;
-        if ( prev >= 0 ) {
-            return this._parent._children[ prev ];
-        }
-    };
-    /**
-     * 返回同一个深度中的下一个节点
-     * @param {object} 节点
-     */
-    Node.prototype.next = function() {
-        var index = this.getIndex(),
-            next = index + 1;
-        if ( ~index && next < this._parent._children.length ) {
-            return this._parent._children[ next ];
-        }
-    };
-    /**
-     * 返回当前节点的最后一个子节点
-     * @return {object} 子节点
-     */
-    Node.prototype.lastChild = function() {
-        return this._children && this._children[this._children.length-1];
-    };
-    /**
-     * 返回当前节点的第一个子节点
-     * @return {object} 子节点
-     */
-    Node.prototype.firstChild = function() {
-        return this._children && this._children[0];
-    };
-    /**
-     * 查找当前节点的祖先元素是否是指定的标签
-     * @param {array/string} tagNames
-     * @param {boolean} includeSelf 当前是否也需要判断
-     * @return {object} 最先找到的符合的节点,没有找到则为空
-     */
-    Node.prototype.findAncestorByTagName = function( tagNames, includeSelf ) {
-        var node = includeSelf ? this : this._parent;
-        tagNames = typeof tagNames === 'string' ? [tagNames] : tagNames;
-        while( node ) {
-            if( ~$.inArray( node.tagName, tagNames ) ) {
-                return node;
-            }
-            node = node._parent;
-        }
-    };
-    /**
-     * 克隆节点，如果是深度克隆则会拷贝上下节点的关系，即拷贝子节点！(注意循环引用)
-     * @param {boolean} deep 是否是深度克隆
-     * @return {object} 克隆得到的节点
-     */
-    Node.prototype.clone = function( deep ) {
-        var n = new Node();
-        n.tagName = this.tagName;
-        n.value = this.value;
-        if( this._attrs ) {
-            n._attrs = {};
-            this.eachAttr(function( v, k ) {
-                n._attrs.k = v;
-            });
-        }
-        if ( deep ) {
-            var children = this.children(),
-                i = 0,
-                l = children.length;
-            if ( children.length ) {
-                for( ; i<l; i++ ) {
-                    n.append( children[i].clone( deep ) );
-                }
-            }
-        }
-        return n;
-    };
-    /**
-     * 判断一个节点是否其祖先节点的最下面的节点
-     * @param {object} relative 祖先元素，默认为当前节点的父节点
-     * @return {boolean} 
-     */
-    Node.prototype.isLast = function( relative ) {
-        if ( relative ) {
-            var node = this;
-            do{
-                if ( !node.isLast() ) {
-                    return false;
-                }
-                node = node._parent;
-            } while( node !== relative );
-            return true;
-        } else {
-            var i = this.getIndex();
-            if ( ~i ) {
-                return i === this._parent._children.length - 1;
-            } else {
-                // 没有父节点，或不是父节点的子元素
-                return true;
-            }
-        }
-    };
-    /**
-     * 判断一个节点是否其祖先节点的最上面的节点
-     * @param {object} relative 祖先元素，默认为当前节点的父节点
-     * @return {boolean} 
-     */
-    Node.prototype.isFirst = function( relative ) {
-        if ( relative ) {
-            var node = this;
-            do{
-                if ( !node.isFirst() ) {
-                    return false;
-                }
-                node = node._parent;
-            } while( node !== relative );
-            return true;
-        } else {
-            var i = this.getIndex();
-            if ( ~i ) {
-                return i === 0;
-            } else {
-                // 没有父节点，或不是父节点的子元素
-                return true;
-            }
-        }
-    };
-
-    return Node;
-})();
-
 var UBB = (function () {
     'use strict';
-    var ubbTagNameReg = /\[(\/)?([a-zA-Z]+)/,
+    var Tree = {
+            clone: function(node, withChild) {
+                if (!withChild) {
+                    withChild = node;
+                    node = this;
+                }
+                if (withChild) {
+                    var i,l,
+                        newNode = node.clone();
+                    for (i=0,l=node.length; i<l; i++) {
+                        newNode.append(node[i].clone(true));
+                    }
+                    return newNode;
+                } else {
+                    return Tree.createNode(node.name, node.attr);
+                }
+            },
+            lastChild: function(node) {
+                if (!node) {
+                    node = this;
+                }
+                return node[node.length-1];
+            },
+            append: function(father, son) {
+                if (!son) {
+                    son = father;
+                    father = this;
+                }
+                father.push(son);
+                son.parent = father;
+            },
+            createNode: function(name, attr) {
+                var n = [];
+                n.append = Tree.append;
+                n.lastChild = Tree.lastChild;
+                if (name) {
+                    n.name = name;
+                }
+                if (attr) {
+                    n.attr = attr;
+                }
+                return n;
+            }
+        },
+        ubbTagNameReg = /\[(\/)?([a-zA-Z]+)/,
         tagsParser = {
+            // lowerCase tag name
             bold: {
                 /**
                  * parse html node to UBB text
@@ -353,10 +92,11 @@ var UBB = (function () {
                 parseUBB: function(tag) {
                     return tag.isClose ? '</b>' : '<b>';
                 },
-                // positive integer.
-                // Tag with bigger priority can contians small one.
-                // If equal, then they can contains each other.
-                priority: 2,
+                // string.
+                // Specified which tag can be contained.
+                // '' or undefined indicate it can't contian any tag.
+                // '*' indicate it can contian any tag.
+                canContains: 'bold,italic,color,url',
                 // bool.
                 // If true, then this tag can contains '\n'.
                 canWrap: 0,
@@ -377,7 +117,7 @@ var UBB = (function () {
                 parseUBB: function(tag) {
                     return tag.isClose ? '</i>' : '<i>';
                 },
-                priority: 2,
+                canContains: 'bold,italic,color,url',
                 canWrap: 0,
                 isBlock: 0,
                 noAttr: 1
@@ -396,7 +136,7 @@ var UBB = (function () {
                 parseUBB: function(tag) {
                     return tag.isClose ? '</span>' : '<span style="color:'+(tag.attr ? tag.attr.slice(1) : '')+';">';
                 },
-                priority: 2,
+                canContains: 'bold,italic,color,url',
                 canWrap: 0,
                 isBlock: 0,
                 noAttr: 0
@@ -429,7 +169,7 @@ var UBB = (function () {
                         return '<a href="'+href+'">';
                     }
                 },
-                priority: 2,
+                canContains: 'bold,italic,color,url',
                 canWrap: 0,
                 isBlock: 0,
                 noAttr: 0
@@ -455,7 +195,6 @@ var UBB = (function () {
                         return  src ? '<img src="'+src+'"/>' : '';
                     }
                 },
-                priority: 1,
                 canWrap: 0,
                 isBlock: 0,
                 noAttr: 1
@@ -482,7 +221,6 @@ var UBB = (function () {
                         return src ? '<img class="gui-ubb-flash" data-src="'+src+'" src="'+setting.flashImage+'" width="480" height="400"/>' : '';
                     }
                 },
-                priority: 1,
                 canWrap: 0,
                 isBlock: 0,
                 noAttr: 1
@@ -503,7 +241,6 @@ var UBB = (function () {
                         return src ? '<img class="gui-ubb-flash" data-src="'+src+'" src="'+setting.flashImage+'" width="480" height="400"/>' : '';
                     }
                 },
-                priority: 1,
                 canWrap: 0,
                 isBlock: 0,
                 noAttr: 1
@@ -517,7 +254,7 @@ var UBB = (function () {
                 parseUBB: function(tag) {
                     return tag.isClose ? '</blockquote>' : '<blockquote>';
                 },
-                priority: 3,
+                canContains: '*',
                 canWrap: 1,
                 isBlock: 1,
                 noAttr: 1
@@ -566,7 +303,7 @@ var UBB = (function () {
                         return '<ul><li>';
                     }
                 },
-                priority: 3,
+                canContains: '*',
                 canWrap: 1,
                 isBlock: 1,
                 noAttr: 1
@@ -615,7 +352,7 @@ var UBB = (function () {
                         return '<ol><li>';
                     }
                 },
-                priority: 3,
+                canContains: '*',
                 canWrap: 1,
                 isBlock: 1,
                 noAttr: 1
@@ -629,7 +366,6 @@ var UBB = (function () {
                 parseUBB: function(tag, i, tags) {
                     return tag.isClose ? '</div>' : '<div class="gui-ubb-ref">';
                 },
-                priority: 1,
                 canWrap: 0,
                 isBlock: 1,
                 noAttr: 1
@@ -639,6 +375,16 @@ var UBB = (function () {
         closeTagCache = {},
         // cache for startTag
         startTagCache = {},
+        blockStype = {
+            'block': 1,
+            'table': 1,
+            'table-cell': 1,
+            'table-caption': 1,
+            'table-footer-group': 1,
+            'table-header-group': 1,
+            'table-row': 1,
+            'table-row-group': 1
+        },
         Util = {
             /**
              * if node is block a line.
@@ -646,16 +392,7 @@ var UBB = (function () {
              * @return {boolean}
              */
             isBlock: function(node) {
-                return ~$.inArray( node.css('display'), [
-                    'block',
-                    'table',
-                    'table-cell',
-                    'table-caption',
-                    'table-footer-group',
-                    'table-header-group',
-                    'table-row',
-                    'table-row-group'
-                ]);
+                return blockStype[node.css('display')];
             },
             /**
              * if fontWeight is bold
@@ -793,11 +530,12 @@ var UBB = (function () {
              * can father contains son
              * @param {object} father father tag
              * @param {object} son son tag
-             * @param {object} ubbTagsPriority prioritys for all tags
+             * @param {object} ubbTagsOrder prioritys for all tags
              * @return {boolean}
              */
-            canContains: function(father, son, ubbTagsPriority) {
-                return ubbTagsPriority[father.name] >= ubbTagsPriority[son.name];
+            canContains: function(father, son, ubbTagsOrder) {
+                var canContainsTags = ubbTagsOrder[father.name];
+                return typeof canContainsTags === 'boolean' ? canContainsTags : canContainsTags[son.name];
             },
             /**
              * push tags into two stack reversed
@@ -817,17 +555,16 @@ var UBB = (function () {
             },
             /**
              * push open ubb tag into stack
-             * @param {array} unMatchedOpenTags
-             * @param {array} stack
+             * @param {array} node
              * @param {object} tag tags to be push
-             * @param {object} ubbTagsPriority
+             * @param {object} ubbTagsOrder
              */
-            pushOpenUbbTag: function(unMatchedOpenTags, stack, tag, ubbTagsPriority) {
+            pushOpenUbbTag: function(node, tag, ubbTagsOrder) {
                 var i, t, autoClosedTags;
                 for (i = unMatchedOpenTags.length-1; i>=0; i--) {
                     t = unMatchedOpenTags[i];
                     // can contains
-                    if (Util.canContains(t, tag, ubbTagsPriority)) {
+                    if (Util.canContains(t, tag, ubbTagsOrder)) {
                         break;
                     } else {
                         autoClosedTags = autoClosedTags || [];
@@ -842,33 +579,30 @@ var UBB = (function () {
             },
             /**
              * push close ubb tag into stack
-             * @param {array} unMatchedOpenTags
-             * @param {array} stack
-             * @param {object} closeTag tags to be push
+             * @param {array} node
+             * @param {string} tagName
              */
-            pushCloseUbbTag: function(unMatchedOpenTags, stack, closeTag) {
-                var tag, i, autoClosedTags, t, l;
-                for (i = unMatchedOpenTags.length-1; i>=0; i--) {
-                    tag = unMatchedOpenTags[i];
-                    // tag match
-                    if (closeTag && closeTag.name === tag.name) {
-                        l = unMatchedOpenTags.length - 1;
-                        // autoClosedTags
-                        while(i<l) {
-                            i++;
-                            t = unMatchedOpenTags.pop();
-                            autoClosedTags = autoClosedTags || [];
-                            autoClosedTags.push(t);
-                            stack.push(Util.getCloseUbbTag(t));
-                        }
-                        unMatchedOpenTags.pop(); // pop the matched tag
-                        stack.push(closeTag);
-                        Util.pushTagsReverse(autoClosedTags, unMatchedOpenTags, stack);
-                        autoClosedTags = null;
-                        return;
-                    }
+            pushCloseUbbTag: function(node, tagName) {
+                var i, l, tmpNode, autoClosedNode;
+                while (!node.isRoot && node.name !== tagName) {
+                    autoClosedNode = autoClosedNode || [];
+                    autoClosedNode.push(node);
+                    node = node.parent;
                 }
-                // no match
+                
+                if (node.isRoot) {
+                    // ignore this tag
+                    return node;
+                } else {
+                    // autoClose
+                    node = node.parent;
+                    for (i=0,l=autoClosedNode.length; i<l; i++) {
+                        tmpNode = autoClosedNode[i].clone();
+                        node.append(tmpNode);
+                        node = tmpNode;
+                    }
+                    return node;
+                }
             },
             /**
              * push ubb tags into stack
@@ -942,11 +676,11 @@ var UBB = (function () {
             /**
              * scan ubb text into tag list
              * @param {string} text ubb text
-             * @param {object} ubbTagsPriority
+             * @param {object} ubbTagsOrder
              * @param {object} wrapUbbTags
              * @return {array} tag list
              */
-            scanUbbText: function(text, ubbTagsPriority, wrapUbbTags) {
+            scanUbbText: function(text, ubbTagsOrder, wrapUbbTags) {
                 // encode html
                 text = Util.htmlEncode(text);
                 text = text.replace(/\r\n/g, '\n'); // for IE hack
@@ -961,7 +695,10 @@ var UBB = (function () {
                     i = 0,
                     l = text.length,
                     buf = '',
-                    node = {};
+                    root = Tree.createNode(),
+                    node = root;
+                // mark root
+                root.isRoot = true;
                 for(; i<l; i++) {
                     c = text.charAt(i);
                     switch(c) {
@@ -974,7 +711,7 @@ var UBB = (function () {
                             state = NOESCAPE;
                         } else {
                             if (buf) {
-                                stack.push(buf);
+                                node.append(buf);
                             }
                             buf = '[';
                         }
@@ -986,31 +723,24 @@ var UBB = (function () {
                         } else {
                             r = ubbTagNameReg.exec(buf);
                             // is tag
-                            if (r && r[2] && ubbTagsPriority[tagName = r[2].toLowerCase()]) {
+                            if (r && r[2] && ((tagName = r[2].toLowerCase()) in ubbTagsOrder)) {
+                                // new tag
                                 isClose = !!r[1];
-                                if (isClose) {
-                                    tag = Util.getCloseUbbTag(tagName);
-                                } else {
+                                if (!isClose) {
                                     attr = buf.slice(r[2].length + (r[1] ? 2 : 1));
-                                    tag = attr ? {name: tagName, attr: attr} : Util.getStartUbbTag(tagName);
+                                    tag = Tree.createNode(tagName, attr);
                                 }
 
-                                prevOpenTag = unMatchedOpenTags[unMatchedOpenTags.length-1];
                                 // close
                                 if (tag.isClose) {
-                                    if (!prevOpenTag) {
-                                        // unused tag has to be clear
-                                        buf = '';
-                                        continue;
-                                    }
-                                    Util.pushCloseUbbTag(unMatchedOpenTags, stack, tag);
+                                    node = Util.pushCloseUbbTag(node, tagName);
                                 // open
                                 } else {
-                                    Util.pushOpenUbbTag(unMatchedOpenTags, stack, tag, ubbTagsPriority);
+                                    node = Util.pushOpenUbbTag(node, tag, ubbTagsOrder);
                                 }
                             // not tag
                             } else {
-                                stack.push(buf + ']');
+                                node.append(buf + ']');
                             }
                             buf = '';
                         }
@@ -1020,10 +750,10 @@ var UBB = (function () {
                             state = NOESCAPE;
                         }
                         if (buf) {
-                            stack.push(buf);
+                            node.append(buf);
                             buf = '';
                         }
-                        Util.pushLineUbbTag(unMatchedOpenTags, stack, '\n', wrapUbbTags);
+                        node = Util.pushLineUbbTag(node, wrapUbbTags);
                         break;
                     default:
                         if (state === ESCAPE) {
@@ -1034,14 +764,10 @@ var UBB = (function () {
                     }
                 }
                 if (buf) {
-                    stack.push(buf);
+                    node.append(buf);
                 }
 
-                // complete all unmatched open tag
-                for (j = unMatchedOpenTags.length-1; j>=0; j--) {
-                    stack.push(Util.getCloseUbbTag(unMatchedOpenTags[j]));
-                }
-                return stack;
+                return root;
             }
         },
         /**
@@ -1075,7 +801,7 @@ var UBB = (function () {
             var i, l, tag, nextTag,
                 isStartWithNewLine = /^\n/,
                 str = '',
-                tags = Util.scanUbbText(ubb, setting.ubbTagsPriority, setting.wrapUbbTags),
+                tags = Util.scanUbbText(ubb, setting.ubbTagsOrder, setting.wrapUbbTags),
                 tagsParser = setting.tags,
                 tagInfo;
             for (i=0,l=tags.length; i<l; i++) {
@@ -1109,7 +835,7 @@ var UBB = (function () {
             var i, l, tag, nextTag,
                 isStartWithNewLine = /^\n/,
                 str = '',
-                tags = Util.scanUbbText(ubb, setting.ubbTagsPriority, setting.wrapUbbTags);
+                tags = Util.scanUbbText(ubb, setting.ubbTagsOrder, setting.wrapUbbTags);
             for (i=0,l=tags.length; i<l; i++) {
                 tag = tags[i];
                 if (typeof tag === 'string') {
@@ -1139,13 +865,31 @@ var UBB = (function () {
                             flashImage: '/skin/imgs/flash.png'
                        }, setting);
         this.setting.tags = $.extend(tagsParser, this.setting.tags);
-        this.setting.ubbTagsPriority = {};
+        this.setting.ubbTagsOrder = {};
         this.setting.wrapUbbTags = {};
-        var k, v;
+        var k, v, i, l, tagNames, order;
         setting = this.setting;
         for (k in setting.tags) {
             v = setting.tags[k];
-            setting.ubbTagsPriority[k] = v.priority;
+            switch (v.canContains) {
+            case '*':
+                setting.ubbTagsOrder[k] = true;
+                break;
+            case '':
+                setting.ubbTagsOrder[k] = false;
+                break;
+            case undefined:
+                setting.ubbTagsOrder[k] = false;
+                break;
+            default:
+                tagNames = v.canContains.split(',');
+                order = {};
+                for (i=0,l=tagNames.length; i<l; i++) {
+                    order[tagNames[i].toLowerCase()] = true;
+                }
+                setting.ubbTagsOrder[k] = order;
+                break;
+            }
             setting.wrapUbbTags[k] = v.canWrap;
         }
     }

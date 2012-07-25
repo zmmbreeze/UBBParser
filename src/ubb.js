@@ -15,6 +15,7 @@ var UBB = (function () {
     'use strict';
     var ubbTagNameReg = /\[(\/)?([a-zA-Z]+)/,
         tagsParser = {
+            // lowerCase tag name
             bold: {
                 /**
                  * parse html node to UBB text
@@ -48,10 +49,11 @@ var UBB = (function () {
                 parseUBB: function(tag) {
                     return tag.isClose ? '</b>' : '<b>';
                 },
-                // positive integer.
-                // Tag with bigger priority can contians small one.
-                // If equal, then they can contains each other.
-                priority: 2,
+                // string.
+                // Specified which tag can be contained.
+                // '' or undefined indicate it can't contian any tag.
+                // '*' indicate it can contian any tag.
+                canContains: 'bold,italic,color,url',
                 // bool.
                 // If true, then this tag can contains '\n'.
                 canWrap: 0,
@@ -72,7 +74,7 @@ var UBB = (function () {
                 parseUBB: function(tag) {
                     return tag.isClose ? '</i>' : '<i>';
                 },
-                priority: 2,
+                canContains: 'bold,italic,color,url',
                 canWrap: 0,
                 isBlock: 0,
                 noAttr: 1
@@ -91,7 +93,7 @@ var UBB = (function () {
                 parseUBB: function(tag) {
                     return tag.isClose ? '</span>' : '<span style="color:'+(tag.attr ? tag.attr.slice(1) : '')+';">';
                 },
-                priority: 2,
+                canContains: 'bold,italic,color,url',
                 canWrap: 0,
                 isBlock: 0,
                 noAttr: 0
@@ -124,7 +126,7 @@ var UBB = (function () {
                         return '<a href="'+href+'">';
                     }
                 },
-                priority: 2,
+                canContains: 'bold,italic,color,url,image',
                 canWrap: 0,
                 isBlock: 0,
                 noAttr: 0
@@ -150,7 +152,6 @@ var UBB = (function () {
                         return  src ? '<img src="'+src+'"/>' : '';
                     }
                 },
-                priority: 1,
                 canWrap: 0,
                 isBlock: 0,
                 noAttr: 1
@@ -177,7 +178,6 @@ var UBB = (function () {
                         return src ? '<img class="gui-ubb-flash" data-src="'+src+'" src="'+setting.flashImage+'" width="480" height="400"/>' : '';
                     }
                 },
-                priority: 1,
                 canWrap: 0,
                 isBlock: 0,
                 noAttr: 1
@@ -198,7 +198,6 @@ var UBB = (function () {
                         return src ? '<img class="gui-ubb-flash" data-src="'+src+'" src="'+setting.flashImage+'" width="480" height="400"/>' : '';
                     }
                 },
-                priority: 1,
                 canWrap: 0,
                 isBlock: 0,
                 noAttr: 1
@@ -212,7 +211,7 @@ var UBB = (function () {
                 parseUBB: function(tag) {
                     return tag.isClose ? '</blockquote>' : '<blockquote>';
                 },
-                priority: 3,
+                canContains: '*',
                 canWrap: 1,
                 isBlock: 1,
                 noAttr: 1
@@ -261,7 +260,7 @@ var UBB = (function () {
                         return '<ul><li>';
                     }
                 },
-                priority: 3,
+                canContains: '*',
                 canWrap: 1,
                 isBlock: 1,
                 noAttr: 1
@@ -310,7 +309,7 @@ var UBB = (function () {
                         return '<ol><li>';
                     }
                 },
-                priority: 3,
+                canContains: '*',
                 canWrap: 1,
                 isBlock: 1,
                 noAttr: 1
@@ -324,7 +323,6 @@ var UBB = (function () {
                 parseUBB: function(tag, i, tags) {
                     return tag.isClose ? '</div>' : '<div class="gui-ubb-ref">';
                 },
-                priority: 1,
                 canWrap: 0,
                 isBlock: 1,
                 noAttr: 1
@@ -334,6 +332,16 @@ var UBB = (function () {
         closeTagCache = {},
         // cache for startTag
         startTagCache = {},
+        blockStype = {
+            'block': 1,
+            'table': 1,
+            'table-cell': 1,
+            'table-caption': 1,
+            'table-footer-group': 1,
+            'table-header-group': 1,
+            'table-row': 1,
+            'table-row-group': 1
+        },
         Util = {
             /**
              * if node is block a line.
@@ -341,16 +349,7 @@ var UBB = (function () {
              * @return {boolean}
              */
             isBlock: function(node) {
-                return ~$.inArray( node.css('display'), [
-                    'block',
-                    'table',
-                    'table-cell',
-                    'table-caption',
-                    'table-footer-group',
-                    'table-header-group',
-                    'table-row',
-                    'table-row-group'
-                ]);
+                return blockStype[node.css('display')];
             },
             /**
              * if fontWeight is bold
@@ -488,11 +487,12 @@ var UBB = (function () {
              * can father contains son
              * @param {object} father father tag
              * @param {object} son son tag
-             * @param {object} ubbTagsPriority prioritys for all tags
+             * @param {object} ubbTagsOrder prioritys for all tags
              * @return {boolean}
              */
-            canContains: function(father, son, ubbTagsPriority) {
-                return ubbTagsPriority[father.name] >= ubbTagsPriority[son.name];
+            canContains: function(father, son, ubbTagsOrder) {
+                var canContainsTags = ubbTagsOrder[father.name];
+                return typeof canContainsTags === 'boolean' ? canContainsTags : canContainsTags[son.name];
             },
             /**
              * push tags into two stack reversed
@@ -515,14 +515,14 @@ var UBB = (function () {
              * @param {array} unMatchedOpenTags
              * @param {array} stack
              * @param {object} tag tags to be push
-             * @param {object} ubbTagsPriority
+             * @param {object} ubbTagsOrder
              */
-            pushOpenUbbTag: function(unMatchedOpenTags, stack, tag, ubbTagsPriority) {
+            pushOpenUbbTag: function(unMatchedOpenTags, stack, tag, ubbTagsOrder) {
                 var i, t, autoClosedTags;
                 for (i = unMatchedOpenTags.length-1; i>=0; i--) {
                     t = unMatchedOpenTags[i];
                     // can contains
-                    if (Util.canContains(t, tag, ubbTagsPriority)) {
+                    if (Util.canContains(t, tag, ubbTagsOrder)) {
                         break;
                     } else {
                         autoClosedTags = autoClosedTags || [];
@@ -591,10 +591,9 @@ var UBB = (function () {
              * push '\n' into stack
              * @param {array} openTags unMatchedOpenTags
              * @param {array} stack
-             * @param {string} textTag '\n' tag
              * @param {object} wrapUbbTags canWrap value
              */
-            pushLineUbbTag: function(openTags, stack, textTag, wrapUbbTags) {
+            pushLineUbbTag: function(openTags, stack, wrapUbbTags) {
                 var i, tag, inlineTags, j;
 
                 inlineTags = [];
@@ -637,11 +636,11 @@ var UBB = (function () {
             /**
              * scan ubb text into tag list
              * @param {string} text ubb text
-             * @param {object} ubbTagsPriority
+             * @param {object} ubbTagsOrder
              * @param {object} wrapUbbTags
              * @return {array} tag list
              */
-            scanUbbText: function(text, ubbTagsPriority, wrapUbbTags) {
+            scanUbbText: function(text, ubbTagsOrder, wrapUbbTags) {
                 // encode html
                 text = Util.htmlEncode(text);
                 text = text.replace(/\r\n/g, '\n'); // for IE hack
@@ -682,7 +681,8 @@ var UBB = (function () {
                         } else {
                             r = ubbTagNameReg.exec(buf);
                             // is tag
-                            if (r && r[2] && ubbTagsPriority[tagName = r[2].toLowerCase()]) {
+                            if (r && r[2] && ((tagName = r[2].toLowerCase()) in ubbTagsOrder)) {
+                                // new tag
                                 isClose = !!r[1];
                                 if (isClose) {
                                     tag = Util.getCloseUbbTag(tagName);
@@ -691,6 +691,7 @@ var UBB = (function () {
                                     tag = attr ? {name: tagName, attr: attr} : Util.getStartUbbTag(tagName);
                                 }
 
+                                // push tag
                                 prevOpenTag = unMatchedOpenTags[unMatchedOpenTags.length-1];
                                 // close
                                 if (tag.isClose) {
@@ -702,7 +703,7 @@ var UBB = (function () {
                                     Util.pushCloseUbbTag(unMatchedOpenTags, stack, tag);
                                 // open
                                 } else {
-                                    Util.pushOpenUbbTag(unMatchedOpenTags, stack, tag, ubbTagsPriority);
+                                    Util.pushOpenUbbTag(unMatchedOpenTags, stack, tag, ubbTagsOrder);
                                 }
                             // not tag
                             } else {
@@ -719,7 +720,7 @@ var UBB = (function () {
                             stack.push(buf);
                             buf = '';
                         }
-                        Util.pushLineUbbTag(unMatchedOpenTags, stack, '\n', wrapUbbTags);
+                        Util.pushLineUbbTag(unMatchedOpenTags, stack, wrapUbbTags);
                         break;
                     default:
                         if (state === ESCAPE) {
@@ -771,7 +772,7 @@ var UBB = (function () {
             var i, l, tag, nextTag,
                 isStartWithNewLine = /^\n/,
                 str = '',
-                tags = Util.scanUbbText(ubb, setting.ubbTagsPriority, setting.wrapUbbTags),
+                tags = Util.scanUbbText(ubb, setting.ubbTagsOrder, setting.wrapUbbTags),
                 tagsParser = setting.tags,
                 tagInfo;
             for (i=0,l=tags.length; i<l; i++) {
@@ -805,7 +806,7 @@ var UBB = (function () {
             var i, l, tag, nextTag,
                 isStartWithNewLine = /^\n/,
                 str = '',
-                tags = Util.scanUbbText(ubb, setting.ubbTagsPriority, setting.wrapUbbTags);
+                tags = Util.scanUbbText(ubb, setting.ubbTagsOrder, setting.wrapUbbTags);
             for (i=0,l=tags.length; i<l; i++) {
                 tag = tags[i];
                 if (typeof tag === 'string') {
@@ -835,13 +836,31 @@ var UBB = (function () {
                             flashImage: '/skin/imgs/flash.png'
                        }, setting);
         this.setting.tags = $.extend(tagsParser, this.setting.tags);
-        this.setting.ubbTagsPriority = {};
+        this.setting.ubbTagsOrder = {};
         this.setting.wrapUbbTags = {};
-        var k, v;
+        var k, v, i, l, tagNames, order;
         setting = this.setting;
         for (k in setting.tags) {
             v = setting.tags[k];
-            setting.ubbTagsPriority[k] = v.priority;
+            switch (v.canContains) {
+            case '*':
+                setting.ubbTagsOrder[k] = true;
+                break;
+            case '':
+                setting.ubbTagsOrder[k] = false;
+                break;
+            case undefined:
+                setting.ubbTagsOrder[k] = false;
+                break;
+            default:
+                tagNames = v.canContains.split(',');
+                order = {};
+                for (i=0,l=tagNames.length; i<l; i++) {
+                    order[tagNames[i].toLowerCase()] = true;
+                }
+                setting.ubbTagsOrder[k] = order;
+                break;
+            }
             setting.wrapUbbTags[k] = v.canWrap;
         }
     }

@@ -3,8 +3,6 @@ UBB语法
 
 UBB的解析
 -------------
-
- width="480" height="400"
       
       一个有效的UBB节点结构分为三个部分,示例如下：
           
@@ -22,7 +20,7 @@ UBB的解析
 
       标签的特性有三个：
 
-          a. priority优先级：值为正整数，优先级高的标签可以包含优先级低的标签，优先级相同则可以互相包含
+          a. canContains表示此标签可以包含的标签：字符串，例如：'bold,italic','*'（可以包含任何标签），''（不能包含任何标签），若无此属性也表示不能包含任何标签
           b. canWrap是否可换行：bool值，表示标签内容块是否可以换行
           c. isBlock是否是块级元素：bool值，表示标签转换成HTML元素后该HTML元素是否是block元素
 
@@ -33,7 +31,7 @@ UBB的解析
     <tr>
         <th>标签名</th>
         <th>属性</th>
-        <th>priority</th>
+        <th>canContains</th>
         <th>canWrap</th>
         <th>isBlock</th>
         <th>样例</th>
@@ -44,7 +42,7 @@ UBB的解析
     <tr>
         <td>bold</td>
         <td>无</td>
-        <td>2</td>
+        <td>'bold,italic,color,url'</td>
         <td>false</td>
         <td>false</td>
         <td>[bold]加粗[/bold]</td>
@@ -53,7 +51,7 @@ UBB的解析
     <tr>
         <td>italic</td>
         <td>无</td>
-        <td>2</td>
+        <td>'bold,italic,color,url'</td>
         <td>false</td>
         <td>false</td>
         <td>[italic]斜体[/italic]</td>
@@ -62,7 +60,7 @@ UBB的解析
     <tr>
         <td>color</td>
         <td>=#000</td>
-        <td>2</td>
+        <td>'bold,italic,color,url'</td>
         <td>false</td>
         <td>false</td>
         <td>[color=blue]蓝色[/color]</td>
@@ -71,7 +69,7 @@ UBB的解析
     <tr>
         <td>url</td>
         <td> href=http://www.guokr.com/</td>
-        <td>2</td>
+        <td>'bold,italic,color,url,image'</td>
         <td>false</td>
         <td>false</td>
         <td>[url href=http://www.guokr.com]果壳网[/url]</td>
@@ -80,7 +78,7 @@ UBB的解析
     <tr>
         <td>image</td>
         <td>无</td>
-        <td>1</td>
+        <td>''</td>
         <td>false</td>
         <td>false</td>
         <td>[image]http://www.guokr.com/skin/imgs/3-logo.png[/image]</td>
@@ -89,7 +87,7 @@ UBB的解析
     <tr>
         <td>video</td>
         <td>无</td>
-        <td>1</td>
+        <td>''</td>
         <td>false</td>
         <td>false</td>
         <td>[video]http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf[/video]</td>
@@ -100,7 +98,7 @@ UBB的解析
     <tr>
         <td>flash</td>
         <td>无</td>
-        <td>1</td>
+        <td>''</td>
         <td>false</td>
         <td>false</td>
         <td>[flash]http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf[/flash]</td>
@@ -111,7 +109,7 @@ UBB的解析
     <tr>
         <td>blockquote</td>
         <td>无</td>
-        <td>3</td>
+        <td>‘*’</td>
         <td>true</td>
         <td>true</td>
         <td>[blockquote]引用别人的评论[/blockquote]</td>
@@ -121,7 +119,7 @@ UBB的解析
     <tr>
         <td>ul</td>
         <td>无</td>
-        <td>3</td>
+        <td>‘*’</td>
         <td>true</td>
         <td>true</td>
         <td>[ul]<br/>
@@ -136,7 +134,7 @@ UBB的解析
     <tr>
         <td>ol</td>
         <td>无</td>
-        <td>3</td>
+        <td>‘*’</td>
         <td>true</td>
         <td>true</td>
         <td>[ol]<br/>
@@ -151,10 +149,10 @@ UBB的解析
     <tr>
         <td>ref</td>
         <td>无</td>
-        <td>1</td>
+        <td>‘’</td>
         <td>false</td>
         <td>true</td>
-        <td>[ref]引用别人的评论[/ref]</td>
+        <td>[ref]引用别人的评论[/ref]</td>p
         <td>前端预览：<br/>&lt;div class="gui-ubb-ref"&gt;http://www.guokr.com/article/176586/&lt;/div&gt;<br/>
 后端生成：<br/>&lt;div class="gui-ubbv-ref-bd"&gt;<br/>
 &lt;div class="gui-ubbv-ref-bd"&gt;<br/>
@@ -242,21 +240,35 @@ UBB的解析
              步骤三：[bold][italic]aaaa[/italic][/bold][italic]bbb[/italic]
              最后自动闭合剩余的
 
-    c. 优先级低的标签包含优先级高的标签时
+    c. 与标签包含规则相悖
 
-          解决方案，在高标签前自动补全低标签。例如：
+          情况一：前一个标签不能包含后一个标签，但后一个标签可以包含前一个标签
+          解决方案，在自动补全前几个标签。例如：
 
-              [bold][ul]
+              [bold][italic][ul]
               aaa
               bbbb
-              [/ul]ccc[/bold]
+              [/ul]ccc[/italic][/bold]
 
           转换成：
 
-              [bold][/bold][ul][bold][/bold]
-              [bold]aaa[/bold]
-              [bold]bbbb[/bold]
-              [bold][/bold][/ul][bold]ccc[/bold]
+              [bold][/bold][ul][bold][italic][/italic][/bold]
+              [bold][italic]aaa[/italic][/bold]
+              [bold][italic]bbbb[/italic][/bold]
+              [bold][italic][/italic][/bold][/ul][bold][italic]ccc[/italic][/bold]
+
+          步骤一：ul开始标签优先级大于bold和italic开始标签，于是自动补全bold和italic结束标签；
+          步骤二：bold和italic不支持内部换行，补全
+          步骤三：bold结束标签,找到已匹配标签bold，自动将前一个bold开始标签同时做为此结束标签的开始
+
+          情况二：标签不能互相包含
+          解决方案，在自动补全前几个标签。例如：
+
+              [bold][ref]aaa[/ref]ccc[/bold]
+
+          转换成：
+
+              [bold][/bold][ref]aaa[/ref][bold]ccc[/bold]
 
           步骤一：ul开始标签优先级大于bold开始标签，于是自动补全bold结束标签；
           步骤二：bold结束标签,找到已匹配标签bold，自动将前一个bold开始标签同时做为此结束标签的开始
