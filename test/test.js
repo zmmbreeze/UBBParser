@@ -33,9 +33,17 @@ describe('ubb.js:', function() {
             expect(re).toEqual('<ul><li>This is a ul!</li><li>And it is awesome!</li></ul>');
             re = ubb.UBBtoHTML('[ul]This is a ul!\nAnd it is awesome![/ul]');
             expect(re).toEqual('<ul><li>This is a ul!</li><li>And it is awesome!</li></ul>');
+            re = ubb.UBBtoHTML('[ul]\nThis is a ul!\nAnd it is awesome![/ul]');
+            expect(re).toEqual('<ul><li>This is a ul!</li><li>And it is awesome!</li></ul>');
+            re = ubb.UBBtoHTML('[ul]This is a ul!\nAnd it is awesome!\n[/ul]');
+            expect(re).toEqual('<ul><li>This is a ul!</li><li>And it is awesome!</li></ul>');
             re = ubb.UBBtoHTML('[ol]\nThis is a ol!\nAnd it is awesome!\n[/ol]');
             expect(re).toEqual('<ol><li>This is a ol!</li><li>And it is awesome!</li></ol>');
             re = ubb.UBBtoHTML('[ol]This is a ol!\nAnd it is awesome![/ol]');
+            expect(re).toEqual('<ol><li>This is a ol!</li><li>And it is awesome!</li></ol>');
+            re = ubb.UBBtoHTML('[ol]This is a ol!\nAnd it is awesome!\n[/ol]');
+            expect(re).toEqual('<ol><li>This is a ol!</li><li>And it is awesome!</li></ol>');
+            re = ubb.UBBtoHTML('[ol]\nThis is a ol!\nAnd it is awesome![/ol]');
             expect(re).toEqual('<ol><li>This is a ol!</li><li>And it is awesome!</li></ol>');
             re = ubb.UBBtoHTML('[ref]http://www.guokr.com/article/176586/[/ref]\nAfter ref!');
             expect(re).toEqual('<div class="gui-ubb-ref">http://www.guokr.com/article/176586/</div>After ref!');
@@ -146,9 +154,9 @@ bbbb\n\
 [bold][italic]bbbb[/italic][/bold]\n\
 [bold][italic][/italic][/bold][/ul][bold][italic]ccc[/italic][/bold]');
             re = ubb.fixUBB('[bold]bbb[ref]aaa[/ref]ccc[/bold]');
-            expect(re).toEqual('[bold]bbb[/bold][ref]aaa[/ref][bold]ccc[/bold]');
+            expect(re).toEqual('[bold]bbb[/bold][ref]aaa[/ref]ccc');
             re = ubb.fixUBB('[bold][italic]bbb[ref]aaa[/ref]ccc[/italic][/bold]');
-            expect(re).toEqual('[bold][italic]bbb[/italic][/bold][ref]aaa[/ref][bold][italic]ccc[/italic][/bold]');
+            expect(re).toEqual('[bold][italic]bbb[/italic][/bold][ref]aaa[/ref]ccc');
         });
     });
 

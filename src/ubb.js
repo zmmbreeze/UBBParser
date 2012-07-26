@@ -532,7 +532,10 @@ var UBB = (function () {
                 }
                 unMatchedOpenTags.push(tag);
                 stack.push(tag);
-                Util.pushTagsReverse(autoClosedTags, unMatchedOpenTags, stack);
+                // if tag can contains autoClosedTags
+                if (autoClosedTags && Util.canContains(tag, autoClosedTags[autoClosedTags.length-1], ubbTagsOrder)) {
+                    Util.pushTagsReverse(autoClosedTags, unMatchedOpenTags, stack);
+                }
                 autoClosedTags = null;
             },
             /**
