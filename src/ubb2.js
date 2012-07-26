@@ -407,6 +407,30 @@ var UBB = (function () {
             ubbEscape: function(str) {
                 return str.replace(/(\[|\])/g, '\\$1');
             },
+            prevNode: function(node) {
+                var prev = node.previousSibling,
+                    text;
+                if (prev) {
+                    text = prev.data;
+                    if ($.trim(text) === '' || text === '\n') {
+                        return Util.nextNode(prev);
+                    } else {
+                        return prev;
+                    }
+                }
+            },
+            nextNode: function(node) {
+                var next = node.nextSibling,
+                    text;
+                if (next) {
+                    text = next.data;
+                    if ($.trim(text) === '' || text === '\n') {
+                        return Util.nextNode(next);
+                    } else {
+                        return next;
+                    }
+                }
+            },
             /**
              * parse jquery node to ubb text
              * @param {object} node jquery object
@@ -416,6 +440,7 @@ var UBB = (function () {
              */
             parseNode: function(node, sonString, setting) {
                 var tagName, tagParser, tmp, addNewLineLater,
+                    next, prev,
                     nodeType = node[0].nodeType,
                     nodeName = node[0].nodeName.toLowerCase();
                 // comments
@@ -425,11 +450,15 @@ var UBB = (function () {
                 // text
                 if (nodeType !== 3) {
                     // node是block元素，并且它不是父元素的最后一个节点
-                    if (Util.isBlock(node) && !(Util.isBlock(node.parent()) && !node.next().length) ) {
+                    if (Util.isBlock(node) && !(Util.isBlock(node.parent()) && !Util.nextNode(node[0]))) {
                         addNewLineLater = true;
                     }
                     if (nodeName === 'br') {
-                        sonString = sonString + '\n';
+                        prev = Util.prevNode(node[0]);
+                        next = Util.nextNode(node[0]);
+                        if (Util.isBlock(node.next()) || Util.isBlock(node.next()) || !(prev && !next)) {
+                            sonString = sonString + '\n';
+                        }
                     }
                 } else {
                     sonString = node.text();
