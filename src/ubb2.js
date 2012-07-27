@@ -438,7 +438,7 @@ var UBB = (function () {
              * @param {object} setting
              * @return {string} ubb text of node and it's children
              */
-            parseNode: function(node, sonString, setting) {
+            parseNode: function(node, sonString, setting, blockContext) {
                 var tagName, tagParser, tmp, addNewLineLater,
                     next, prev,
                     nodeType = node[0].nodeType,
@@ -450,7 +450,7 @@ var UBB = (function () {
                 // text
                 if (nodeType !== 3) {
                     // node是block元素，并且它不是父元素的最后一个节点
-                    if (Util.isBlock(node) && !(Util.isBlock(node.parent()) && !Util.nextNode(node[0]))) {
+                    if (Util.isBlock(node) && (node.height() > 0) && !(Util.isBlock(node.parent()) && !Util.nextNode(node[0]))) {
                         addNewLineLater = true;
                     }
                     if (nodeName === 'br') {
@@ -730,21 +730,30 @@ var UBB = (function () {
         },
         /**
          * parse jquery node into html
-         * @param {object} node jquery object
+         * @param {object} node jquery object, must be a block element
          * @param {object} setting
          * @param {object} parent jquery object
          * @return {string} ubb text
          */
-        parseHtml = function(node, setting, parent) {
-            var i,l,
+        parseHtml = function(node, setting, state) {
+            var i,l,isBlock,
                 re = [],
                 children = node.contents();
+            state = state || {};
+            if (Util.isBlock(node)) {
+                state.blockContext = node;
+                isBlock = true;
+            }
             for (i=0,l=children.length; i<l; i++) {
-                re.push(parseHtml(children.eq(i), setting, node));
+                re.push(parseHtml(children.eq(i), setting, state));
+                // reset blockContext
+                if (isBlock) {
+                    state.blockContext = node;
+                }
             }
             // make sure container not to be parsed
-            if (parent) {
-                return Util.parseNode(node, re.join(''), setting);
+            if (state.blockContext) {
+                return Util.parseNode(node, re.join(''), setting, state.blockContext);
             } else {
                 return re.join('');
             }
@@ -849,7 +858,7 @@ var UBB = (function () {
     }
     UBB.Util = Util;
     /**
-     * @param {object} $dom jquery
+     * @param {object} $dom jquery, must be a block element
      * @return {string} ubb text
      */
     UBB.prototype.HTMLtoUBB = function ($dom) {
