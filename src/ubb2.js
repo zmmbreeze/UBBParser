@@ -380,17 +380,17 @@ var UBB = (function () {
              * @param {string} oldColor rbg color
              * @return {string} hex color
              */
-            RGBtoHEX: function ( oldColor ) {
+            RGBtoHEX: function (oldColor) {
                 var i,
                     RGB2HexValue = '',
                     numbers,
                     regExp = /([0-9]+)[, ]+([0-9]+)[, ]+([0-9]+)/,
                     array = regExp.exec(oldColor);
                 if (!array) {
-                    if ( oldColor.length === 4 ) {
+                    if (oldColor.length === 4) {
                         numbers = oldColor.split('').slice(1);
                         RGB2HexValue = '#';
-                        for ( i=0; i<3; i++ ) {
+                        for (i=0; i<3; i++) {
                             RGB2HexValue += numbers[i]+numbers[i];
                         }
                     } else {
@@ -407,29 +407,49 @@ var UBB = (function () {
             ubbEscape: function(str) {
                 return str.replace(/(\[|\])/g, '\\$1');
             },
-            prevNode: function(node) {
-                var prev = node.previousSibling,
-                    text;
-                if (prev) {
-                    text = prev.data;
-                    if ($.trim(text) === '' || text === '\n') {
-                        return Util.nextNode(prev);
+            isTextOrBr: function(node) {
+                return node.nodeType === 3 || (node.nodeType === 1 && node.nodeName.toLowerCase() === 'br');
+            },
+            prevTextOrBr: function(node, blockNode) {
+                var texts = [],
+                    parent = node.parentNode;
+                function upAndPrev(node) {
+                    if (node == null) {
+                        return;
+                    } else if (Util.isTextOrBr(node)) {
+                        return node;
                     } else {
-                        return prev;
+                        if (node === blockNode) {
+                            return;
+                        }
+                        var children = node.childNodes;
+                        if (children.length) {
+                            return upAndPrev(children[children.length-1]);
+                        }
+                        var prev = node.prevSibling;
+                        if (prev) {
+                            return upAndPrev(prev);
+                        } else {
+                            return upAndPrev(node.parentNode.prevSibling);
+                        }
+                    }
+                    if (!prev) {
+                        if (parent !== blockNode) {
+                        } else {
+                            return;
+                        }
+                    } else {
+                        if (prev.childNodes.length) {
+                            
+                        } else {
+
+                        }
+                        return Util.isTextOrBr(prev) ? prev : null;
                     }
                 }
             },
-            nextNode: function(node) {
-                var next = node.nextSibling,
-                    text;
-                if (next) {
-                    text = next.data;
-                    if ($.trim(text) === '' || text === '\n') {
-                        return Util.nextNode(next);
-                    } else {
-                        return next;
-                    }
-                }
+            nextTextOrBr: function(node, blockNode) {
+                var text;
             },
             /**
              * parse jquery node to ubb text
