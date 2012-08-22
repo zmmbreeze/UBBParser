@@ -103,9 +103,102 @@ And it\'s awesome![/blockquote]\n\
             expect(re).toEqual('aaa\n\nbbb');
             re = toUbb('bbb<br/><div>aaa<div>');
             expect(re).toEqual('bbb\naaa');
+            re = toUbb('<div><div><p></p></div></div>');
+            expect(re).toEqual('');
+            re = toUbb('<div><div><p><br/></p></div></div>');
+            expect(re).toEqual('');
+            re = toUbb('<p><img src="http://www.guokr.com/gkimage/jr/y1/zk/jry1zk.jpg" width="48" height="48" border="0" hspace="0" vspace="0">童话的世界中贫穷总是伴随着善<strong>良而乐于助人，富有</strong>的人常常拥有邪恶的嘴脸。<br>\
+新闻的世<em>界中，富二代飞扬跋扈</em>，屌丝默默地做好事儿。<br>\
+现实的世<img src="http://www.guokr.com/gkimage/jr/y1/zk/jry1zk.jpg" width="48" height="48" border="0" hspace="0" vspace="0">界中呢？<br>\
+大家还记得可爱的Milgram老师吗？\
+</p>\
+<ol style="list-style-type:decimal;">\
+<li>\
+<p>\
+就是津巴多老师的好机油，以电击实验（好吧，是权威服从实验）闻名于江湖的。\
+</p>\
+</li>\
+<li>\
+<p>\
+他还做过好多奇形怪状充满想象力的实验。<br>\
+</p>\
+</li>\
+<li>\
+<p>\
+比如把写好自己地址的明信片/信仍在大街上，等着看自己能回收多少封。。。。\
+</p>\
+</li>\
+</ol>\
+<p>\
+<br>\
+</p>\
+<p>\
+<br>\
+</p>\
+<p>\
+<br>\
+</p>\
+<p>\
+这真不是蛋疼，这个实验还是得出了不少有用的结论的。比如贴上邮票的回收率更高，离邮筒近的回收率更高。这说明好人做好事也需要条件，如果太不方便，就懒得做了。看似蛋疼地验证了一个常识，但是严谨地告诉我们一个道理：要想让世界上有更多好人好事，就要为好人好事创造条件。\
+</p>');
+            expect(re).toEqual('[image]http://www.guokr.com/gkimage/jr/y1/zk/jry1zk.jpg[/image]童话的世界中贫穷总是伴随着善[bold]良而乐于助人，富有[/bold]的人常常拥有邪恶的嘴脸。\n\
+新闻的世[italic]界中，富二代飞扬跋扈[/italic]，屌丝默默地做好事儿。\n\
+现实的世[image]http://www.guokr.com/gkimage/jr/y1/zk/jry1zk.jpg[/image]界中呢？\n\
+大家还记得可爱的Milgram老师吗？\n\
+[ol]\n\
+就是津巴多老师的好机油，以电击实验（好吧，是权威服从实验）闻名于江湖的。\n\
+他还做过好多奇形怪状充满想象力的实验。\n\
+比如把写好自己地址的明信片/信仍在大街上，等着看自己能回收多少封。。。。\n\
+[/ol]\n\
+\n\
+\n\
+\n\
+这真不是蛋疼，这个实验还是得出了不少有用的结论的。比如贴上邮票的回收率更高，离邮筒近的回收率更高。这说明好人做好事也需要条件，如果太不方便，就懒得做了。看似蛋疼地验证了一个常识，但是严谨地告诉我们一个道理：要想让世界上有更多好人好事，就要为好人好事创造条件。');
+            re = toUbb('aaa<br/><b>bbb</b>');
+            expect(re).toEqual('aaa\n[bold]bbb[/bold]');
+            /*
+            re = toUbb('aaa<br/><span></span>');
+            expect(re).toEqual('aaa');
+            re = toUbb('<a href="http://www.guokr.com/i/0014169607/">aaa</a><br><a href="http://www.guokr.com/i/0014169607/">bbb</a>');
+            expect(re).toEqual('[url href=http://www.guokr.com/i/0014169607/]aaa[/url]\n[url href=http://www.guokr.com/i/0014169607/]bbb[/url]');
+            */
+            re = toUbb('aaa<br><blockquote>bbb</blockquote>');
+            expect(re).toEqual('aaa\n[blockquote]bbb[/blockquote]');
+
         });
     });
 
+    it('HTMLtoUBB: keepWhiteSpace and keepNewLine', function() {
+        runs(function() {
+            var $html = $('#html'),
+                ubb = new UBB({
+                    defaultColor: '#333333',
+                    linkDefaultColor: '#006688',
+                    keepWhiteSpace: false,
+                    flashImage: 'test.jpg'
+                });
+            function toUbb(html) {
+                $html.html(html);
+                return ubb.HTMLtoUBB($html);
+            }
+
+            var re = toUbb('<p>   aaaa   </p>');
+            expect(re).toEqual('aaaa');
+            re = toUbb('<p>&nbsp;aaaa&nbsp;</p>');
+            expect(re).toEqual('aaaa');
+            re = toUbb('<p>&nbsp;aa   &nbsp;  aa&nbsp;</p>');
+            expect(re).toEqual('aa aa');
+            ubb = new UBB({
+                defaultColor: '#333333',
+                linkDefaultColor: '#006688',
+                keepNewLine: true,
+                flashImage: 'test.jpg'
+            });
+            re = toUbb('\n<p>aaa\nbbb\n</p>\n');
+            expect(re).toEqual('\naaa\nbbb\n\n');
+        });
+    });
+ 
     it('Test: new line', function() {
         runs(function() {
             var $html = $('#html'),

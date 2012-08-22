@@ -444,7 +444,7 @@ var UBB = (function () {
              */
             parseNode: function(node, sonString, setting, state) {
                 var tagName, tagParser, tmp, prefix, suffix,
-                    next, prev,
+                    next, prev, parent,
                     nodeType = node[0].nodeType,
                     nodeName = node[0].nodeName.toLowerCase();
                 // comments
@@ -454,8 +454,11 @@ var UBB = (function () {
                 // text
                 if (nodeType !== 3) {
                     // node is block, height > 0, and it's not last element
-                    if (Util.isBlock(node) && (node.height() > 0) && !(Util.isBlock(node.parent()) && !node.next().length)) {
-                        suffix = '\n';
+                    if (Util.isBlock(node) && (node.height() > 0)) {
+                        parent = node.parent();
+                        if ((!Util.isBlock(parent) && parent[0].nodeName.toLowerCase() !== 'li') || node.next().length) {
+                            suffix = '\n';
+                        }
                     }
 
                     // change text state and set prefix
@@ -475,7 +478,7 @@ var UBB = (function () {
                         return;
                     }
                     if (Util.changeTextState(state, true)) {
-                        sonString = '\n' + sonString;
+                        prefix = '\n';
                     }
                 }
 
@@ -489,6 +492,10 @@ var UBB = (function () {
                     }
                 }
 
+                console.log('----------');
+                console.log(sonString);
+                console.log(prefix);
+                console.log(suffix);
                 if (prefix) {
                     sonString = prefix + sonString;
                 }
@@ -601,11 +608,14 @@ var UBB = (function () {
              * @param {string} text ubb text
              * @param {object} ubbTagsOrder
              * @param {object} wrapUbbTags
+             * @param {boolean} needEncodeHtml
              * @return {array} tag list
              */
-            scanUbbText: function(text, setting) {
+            scanUbbText: function(text, setting, needEncodeHtml) {
                 // encode html
-                text = Util.htmlEncode(text);
+                if (needEncodeHtml) {
+                    text = Util.htmlEncode(text);
+                }
                 text = text.replace(/\r\n/g, '\n'); // for IE hack
                 var c, r, tagName, tag, prevOpenTag, attr, isClose,
                     ubbTagsOrder = setting.ubbTagsOrder,
@@ -843,9 +853,14 @@ var UBB = (function () {
                             defaultColor: '#000000',
                             // color of a elment
                             linkDefaultColor: '#006699',
-                            // if keep white space in html text when converting
+                            // if false,
+                            //     leading or tailing white space will be removed,
+                            //     other space will be trim to one,
+                            //     white space include &nbsp;
                             keepWhiteSpace: true,
-                            // if keep new line space in html text when converting
+                            // if true,
+                            //     keep new line space.
+                            // make sure white-space is pre when use it.
                             keepNewLine: false,
                             // flash image to show
                             flashImage: '/skin/imgs/flash.png'
@@ -892,7 +907,7 @@ var UBB = (function () {
      * @return {string} html text
      */
     UBB.prototype.UBBtoHTML = function(ubb) {
-        return parseUbb(Util.scanUbbText(ubb, this.setting), this.setting);
+        return parseUbb(Util.scanUbbText(ubb, this.setting, true), this.setting);
     };
     /**
      * fix error ubb text
