@@ -10,10 +10,95 @@
 /*jshint undef:true, browser:true, noarg:true, curly:true, regexp:true, newcap:true, trailing:false, noempty:true, regexp:false, strict:true, evil:true, funcscope:true, iterator:true, loopfunc:true, multistr:true, boss:true, eqnull:true, eqeqeq:false, undef:true */
 /*global $:false */
 
-
 var UBB = (function () {
     'use strict';
-    var ubbTagNameReg = /\[(\/)?([a-zA-Z]+)/,
+    var Tree = {
+            clone: function(node, withChildNode) {
+                if (!withChildNode) {
+                    withChildNode = node;
+                    node = this;
+                }
+
+                if (!node.isNode) {
+                    return null;
+                }
+                if (withChildNode) {
+                    var i,l,
+                        newNode = node.clone();
+                    for (i=0,l=node.length; i<l; i++) {
+                        if (node[i].isNode) {
+                            newNode.append(node[i].clone(true));
+                        }
+                    }
+                    return newNode;
+                } else {
+                    return Tree.createNode(node.name, node.attr);
+                }
+            },
+            append: function(father, son) {
+                if (!son) {
+                    son = father;
+                    father = this;
+                }
+                if (!son) {
+                    return father;
+                }
+                if (son.parent) {
+                    throw 'Node ' + son.name + ' has a parent node!';
+                }
+                father.push(son);
+                son.parent = father;
+                return father;
+            },
+            /*
+            detach: function(node) {
+                if (!node) {
+                    node = this;
+                }
+                if (node.parent) {
+                    var i, l, flag,
+                        p = node.parent;
+                    for (i=0,l=p.length; i<l; i++) {
+                        if (p[i] === node) {
+                            flag = true;
+                        }
+                        if (flag) {
+                            p[i] = p[i+1];
+                        }
+                    }
+                    if (flag) {
+                        // pop last undefined element
+                        // make sure length was right
+                        p.pop();
+                    }
+                    node.parent = null;
+                }
+                return node;
+            },
+            */
+            getDeepestChild: function(node) {
+                var next;
+                while (next = node[node.length-1]) {
+                    node = next;
+                }
+                return node;
+            },
+            createNode: function(name, attr) {
+                var n = [];
+                n.isNode = true;
+                n.append = Tree.append;
+                n.clone = Tree.clone;
+                // n.detach = Tree.detach;
+                if (name) {
+                    n.name = name;
+                }
+                if (attr) {
+                    n.attr = attr;
+                }
+                return n;
+            }
+        },
+        ubbTagNameReg = /\[(\/)?([a-zA-Z]+)/,
         tagsParser = {
             // lowerCase tag name
             bold: {
@@ -35,25 +120,23 @@ var UBB = (function () {
                 },
                 /**
                  * parse UBB text to HTML text
-                 * @param {object} tag object represent ubb tag.
+                 * @param {object} node object represent ubb tag.
                  *                     eg:
-                 *                         start tag: {name: 'url', attr:' href=http://guokr.com' };
-                 *                         end tag: {isClose: false, name: 'url', attr:' href=http://guokr.com' };
+                 *                         tree node
                  *                         string tag: 'This is a text'; (It's not contains '\n')
                  *                         \n tag: '\n'.
-                 * @param {number} i index of this tag in tag list(array)
-                 * @param {array} tags tag list
+                 * @param {string} sonString
                  * @param {object} setting
                  * @return {string} html text
                  */
-                parseUBB: function(tag) {
-                    return tag.isClose ? '</b>' : '<b>';
+                parseUBB: function(node, sonString, setting) {
+                    return '<b>' + sonString + '</b>';
                 },
                 // string.
                 // Specified which tag can be contained.
                 // '' or undefined indicate it can't contian any tag.
                 // '*' indicate it can contian any tag.
-                canContains: 'bold,italic,color,url',
+                canContains: 'bold,italic,color,url,image',
                 // bool.
                 // If true, then this tag can contains '\n'.
                 canWrap: 0,
@@ -71,10 +154,10 @@ var UBB = (function () {
                         }
                     }
                 },
-                parseUBB: function(tag) {
-                    return tag.isClose ? '</i>' : '<i>';
+                parseUBB: function(node, sonString, setting) {
+                    return '<i>' + sonString + '</i>';
                 },
-                canContains: 'bold,italic,color,url',
+                canContains: 'bold,italic,color,url,image',
                 canWrap: 0,
                 isBlock: 0,
                 noAttr: 1
@@ -90,10 +173,10 @@ var UBB = (function () {
                         }
                     }
                 },
-                parseUBB: function(tag) {
-                    return tag.isClose ? '</span>' : '<span style="color:'+(tag.attr ? tag.attr.slice(1) : '')+';">';
+                parseUBB: function(node, sonString, setting) {
+                    return '<span style="color:'+(node.attr ? node.attr.slice(1) : '')+';">' + sonString + '</span>';
                 },
-                canContains: 'bold,italic,color,url',
+                canContains: 'bold,italic,color,url,image',
                 canWrap: 0,
                 isBlock: 0,
                 noAttr: 0
@@ -104,27 +187,19 @@ var UBB = (function () {
                         return '[url href='+node.attr('href')+']'+sonString+'[/url]';
                     }
                 },
-                parseUBB: function(tag, i, tags) {
-                    if (tag.isClose) {
-                        return '</a>';
-                    } else {
-                        var t,
-                            l = tags.length,
-                            href = tag.attr ? tag.attr.replace(/^\ href\=/, '') : '';
-                        if (!tag.attr) {
-                            i++;
-                            // for [url]http://www.guokr.com/question/[bold]265263[/bold]/[/url]
-                            for (; i<l; i++) {
-                                t = tags[i];
-                                if (t.isClose && t.name === 'url') {
-                                    break;
-                                } else if (typeof t === 'string') {
-                                    href += t;
-                                }
+                parseUBB: function(node, sonString, setting) {
+                    var i, t, l,
+                        href = node.attr ? node.attr.replace(/^\ href\=/, '') : '';
+                    if (!node.attr) {
+                        // for [url]http://www.guokr.com/question/[bold]265263[/bold]/[/url]
+                        for (i=0,l=node.length; i<l; i++) {
+                            t = node[i];
+                            if (typeof t === 'string') {
+                                href += t;
                             }
                         }
-                        return '<a href="'+href+'">';
                     }
+                    return '<a href="'+href+'">' + sonString + '</a>';
                 },
                 canContains: 'bold,italic,color,url,image',
                 canWrap: 0,
@@ -137,20 +212,8 @@ var UBB = (function () {
                         return '[image]'+node.attr('src')+'[/image]';
                     }
                 },
-                parseUBB: function(tag, i, tags) {
-                    if (tag.isClose) {
-                        return '';
-                    } else {
-                        var src,
-                            nextTag = tags[i+1];
-                        if (typeof nextTag === 'string') {
-                            src = nextTag;
-                            tags[i+1] = ''; // set next text tag = ''
-                        } else {
-                            src = '';
-                        }
-                        return  src ? '<img src="'+src+'"/>' : '';
-                    }
+                parseUBB: function(node, sonString, setting) {
+                    return sonString ? ('<img src="'+sonString+'"/>') : '';
                 },
                 canWrap: 0,
                 isBlock: 0,
@@ -163,40 +226,16 @@ var UBB = (function () {
                         return '[video]'+src+'[/video]';
                     }
                 },
-                parseUBB: function(tag, i, tags, setting) {
-                    if (tag.isClose) {
-                        return '';
-                    } else {
-                        var src,
-                            nextTag = tags[i+1];
-                        if (typeof nextTag === 'string') {
-                            src = nextTag;
-                            tags[i+1] = '';
-                        } else {
-                            src = '';
-                        }
-                        return src ? '<img class="gui-ubb-flash" data-src="'+src+'" src="'+setting.flashImage+'" width="480" height="400"/>' : '';
-                    }
+                parseUBB: function(node, sonString, setting) {
+                    return sonString ? ('<img class="gui-ubb-flash" data-src="'+sonString+'" src="'+setting.flashImage+'" width="480" height="400"/>') : '';
                 },
                 canWrap: 0,
                 isBlock: 0,
                 noAttr: 1
             },
             flash: {
-                parseUBB: function(tag, i, tags, setting) {
-                    if (tag.isClose) {
-                        return '';
-                    } else {
-                        var src,
-                            nextTag = tags[i+1];
-                        if (typeof nextTag === 'string') {
-                            src = nextTag;
-                            tags[i+1] = '';
-                        } else {
-                            src = '';
-                        }
-                        return src ? '<img class="gui-ubb-flash" data-src="'+src+'" src="'+setting.flashImage+'" width="480" height="400"/>' : '';
-                    }
+                parseUBB: function(node, sonString, setting) {
+                    return sonString ? ('<img class="gui-ubb-flash" data-src="'+sonString+'" src="'+setting.flashImage+'" width="480" height="400"/>') : '';
                 },
                 canWrap: 0,
                 isBlock: 0,
@@ -208,8 +247,8 @@ var UBB = (function () {
                         return '[blockquote]'+sonString+'[/blockquote]';
                     }
                 },
-                parseUBB: function(tag) {
-                    return tag.isClose ? '</blockquote>' : '<blockquote>';
+                parseUBB: function(node, sonString, setting) {
+                    return '<blockquote>' + sonString + '</blockquote>';
                 },
                 canContains: '*',
                 canWrap: 1,
@@ -230,35 +269,17 @@ var UBB = (function () {
                         }
                     }
                 },
-                parseUBB: function(tag, i, tags) {
-                    if (tag.isClose) {
-                        return '</li></ul>';
-                    } else {
-                        var l = tags.length,
-                            innerTags = [],
-                            tagIndexs = [],
-                            t, index;
-                        i++;
-                        for (; i<l; i++) {
-                            t = tags[i];
-                            if (t.name === 'ul') {
-                                break;
-                            }
-                            if (typeof t === 'string') {
-                                innerTags.push(t);
-                                tagIndexs.push(i);
-                            }
-                        }
-                        for (i=0,l=innerTags.length; i<l; i++) {
-                            t = innerTags[i];
-                            index = tagIndexs[i];
-                            // add <li>text</li>
-                            if (t && t === '\n') {
-                                tags[index] = (i === 0 || i === l-1) ? '' : '</li><li>';
-                            }
-                        }
-                        return '<ul><li>';
+                parseUBB: function(node, sonString, setting) {
+                    var i = 0,
+                        strs = sonString.split('<br/>'),
+                        j = strs[0] ? 0 : 1,
+                        l = strs[strs.length-1] ? 0 : -1,
+                        newStrs = [];
+                    l += strs.length;
+                    for (; j<l; i++, j++) {
+                        newStrs[i] = strs[j];
                     }
+                    return '<ul><li>' + newStrs.join('</li><li>') + '</li></ul>';
                 },
                 canContains: '*',
                 canWrap: 1,
@@ -279,35 +300,17 @@ var UBB = (function () {
                         }
                     }
                 },
-                parseUBB: function(tag, i, tags) {
-                    if (tag.isClose) {
-                        return '</li></ol>';
-                    } else {
-                        var l = tags.length,
-                            innerTags = [],
-                            tagIndexs = [],
-                            t, index;
-                        i++;
-                        for (; i<l; i++) {
-                            t = tags[i];
-                            if (t.name === 'ol') {
-                                break;
-                            }
-                            if (typeof t === 'string') {
-                                innerTags.push(t);
-                                tagIndexs.push(i);
-                            }
-                        }
-                        for (i=0,l=innerTags.length; i<l; i++) {
-                            t = innerTags[i];
-                            index = tagIndexs[i];
-                            // add <li>text</li>
-                            if (t && t === '\n') {
-                                tags[index] = (i === 0 || i === l-1) ? '' : '</li><li>';
-                            }
-                        }
-                        return '<ol><li>';
+                parseUBB: function(node, sonString, setting) {
+                    var i = 0,
+                        strs = sonString.split('<br/>'),
+                        j = strs[0] ? 0 : 1,
+                        l = strs[strs.length-1] ? 0 : -1,
+                        newStrs = [];
+                    l += strs.length;
+                    for (; j<l; i++, j++) {
+                        newStrs[i] = strs[j];
                     }
+                    return '<ol><li>' + newStrs.join('</li><li>') + '</li></ol>';
                 },
                 canContains: '*',
                 canWrap: 1,
@@ -320,8 +323,8 @@ var UBB = (function () {
                         return '[ref]'+sonString+'[/ref]';
                     }
                 },
-                parseUBB: function(tag, i, tags) {
-                    return tag.isClose ? '</div>' : '<div class="gui-ubb-ref">';
+                parseUBB: function(node, sonString, setting) {
+                    return '<div class="gui-ubb-ref">' + sonString + '</div>';
                 },
                 canWrap: 0,
                 isBlock: 1,
@@ -377,17 +380,17 @@ var UBB = (function () {
              * @param {string} oldColor rbg color
              * @return {string} hex color
              */
-            RGBtoHEX: function ( oldColor ) {
+            RGBtoHEX: function (oldColor) {
                 var i,
                     RGB2HexValue = '',
                     numbers,
                     regExp = /([0-9]+)[, ]+([0-9]+)[, ]+([0-9]+)/,
                     array = regExp.exec(oldColor);
                 if (!array) {
-                    if ( oldColor.length === 4 ) {
+                    if (oldColor.length === 4) {
                         numbers = oldColor.split('').slice(1);
                         RGB2HexValue = '#';
-                        for ( i=0; i<3; i++ ) {
+                        for (i=0; i<3; i++) {
                             RGB2HexValue += numbers[i]+numbers[i];
                         }
                     } else {
@@ -401,8 +404,36 @@ var UBB = (function () {
                 }
                 return RGB2HexValue;
             },
+            /**
+             * escape '[' and ']' to '\[' and '\]'
+             * @param string str html string
+             * @return string escaped string
+             */
             ubbEscape: function(str) {
                 return str.replace(/(\[|\])/g, '\\$1');
+            },
+            /**
+             * change text state
+             *
+             *              text or other element     br
+             *         0    1/false                   2/false
+             *         1    1/false                   2/false
+             *         2    1/true                    2/true
+             *
+             * @param object state text state
+             * @param boolean isText incomming is text or not
+             * @return booleam need a new line or not
+             */
+            changeTextState: function(state, isText) {
+                var textStates = state.textStates,
+                    last = textStates.length - 1,
+                    newLine = false;
+                if (textStates[last] === 2) {
+                     newLine = true;
+                }
+                textStates[last] = isText ? 1 : 2;
+
+                return newLine;
             },
             /**
              * parse jquery node to ubb text
@@ -411,8 +442,9 @@ var UBB = (function () {
              * @param {object} setting
              * @return {string} ubb text of node and it's children
              */
-            parseNode: function(node, sonString, setting) {
-                var tagName, tagParser, tmp, addNewLineLater,
+            parseNode: function(node, sonString, setting, state) {
+                var tagName, tagParser, tmp, prefix, suffix,
+                    next, prev,
                     nodeType = node[0].nodeType,
                     nodeName = node[0].nodeName.toLowerCase();
                 // comments
@@ -421,27 +453,32 @@ var UBB = (function () {
                 }
                 // text
                 if (nodeType !== 3) {
-                    // node是block元素，并且它不是父元素的最后一个节点
-                    if (Util.isBlock(node) && !(Util.isBlock(node.parent()) && !node.next().length) ) {
-                        addNewLineLater = true;
+                    // node is block, height > 0, and it's not last element
+                    if (Util.isBlock(node) && (node.height() > 0) && !(Util.isBlock(node.parent()) && !node.next().length)) {
+                        suffix = '\n';
                     }
-                    if (nodeName === 'br') {
-                        sonString = sonString + '\n';
+
+                    // change text state and set prefix
+                    if (Util.changeTextState(state, nodeName !== 'br')) {
+                        prefix = '\n';
                     }
                 } else {
                     sonString = node.text();
-                    if (!setting.keepWhiteSpace) {
-                        sonString = $.trim(sonString)
-                                     .replace(/\s{2,}/g,' ');
-                    }
                     if (!setting.keepNewLine) {
-                        sonString = sonString.replace(/\n/g,'');
+                        sonString = sonString.replace(/\n/g, '');
+                    }
+                    if (!setting.keepWhiteSpace) {
+                        sonString = $.trim(sonString.replace(/\s{2,}/g, ' '));
                     }
                     sonString = Util.ubbEscape(sonString);
                     if (sonString === '') {
                         return;
                     }
+                    if (Util.changeTextState(state, true)) {
+                        sonString = '\n' + sonString;
+                    }
                 }
+
                 for (tagName in setting.tags) {
                     tagParser = setting.tags[tagName];
                     if (tagParser.parseHTML) {
@@ -451,37 +488,14 @@ var UBB = (function () {
                         }
                     }
                 }
-                if (addNewLineLater) {
-                    sonString = sonString + '\n';
+
+                if (prefix) {
+                    sonString = prefix + sonString;
+                }
+                if (suffix) {
+                    sonString += suffix;
                 }
                 return sonString;
-            },
-            /**
-             * get cached close ubb tag
-             * @param {object/string} startTag start tag or name of tag
-             * @return {object} closeTag
-             */
-            getCloseUbbTag: function(startTag) {
-                var name = typeof startTag === 'string' ? startTag : startTag.name,
-                    closeTag = closeTagCache[name];
-                if (closeTag == null) {
-                    closeTag = {name: name, isClose: true};
-                    closeTagCache[name] = closeTag;
-                }
-                return closeTag;
-            },
-            /**
-             * get cached start ubb tag
-             * @param {string} name name of tag
-             * @return {object} startTag
-             */
-            getStartUbbTag: function(name) {
-                var startTag = startTagCache[name];
-                if (startTag == null) {
-                    startTag = {name: name};
-                    startTagCache[name] = startTag;
-                }
-                return startTag;
             },
             /**
              * can father contains son
@@ -495,132 +509,78 @@ var UBB = (function () {
                 return typeof canContainsTags === 'boolean' ? canContainsTags : canContainsTags[son.name];
             },
             /**
-             * push tags into two stack reversed
-             * @param {array} tags tags to be push
-             * @param {array} stack1
-             * @param {array} stack2
-             */
-            pushTagsReverse: function(tags, stack1, stack2) {
-                if (tags) {
-                    var t, i;
-                    for (i = tags.length-1; i>=0; i--) {
-                        t = tags[i];
-                        stack1.push(t);
-                        stack2.push(t);
-                    }
-                }
-            },
-            /**
              * push open ubb tag into stack
-             * @param {array} unMatchedOpenTags
-             * @param {array} stack
+             * @param {array} node
              * @param {object} tag tags to be push
              * @param {object} ubbTagsOrder
              */
-            pushOpenUbbTag: function(unMatchedOpenTags, stack, tag, ubbTagsOrder) {
-                var i, t, autoClosedTags;
-                for (i = unMatchedOpenTags.length-1; i>=0; i--) {
-                    t = unMatchedOpenTags[i];
-                    // can contains
-                    if (Util.canContains(t, tag, ubbTagsOrder)) {
-                        break;
+            pushOpenUbbTag: function(node, tag, ubbTagsOrder) {
+                var autoClosedNode;
+                while (!node.isRoot && !Util.canContains(node, tag, ubbTagsOrder)) {
+                    if (autoClosedNode) {
+                        autoClosedNode = node.clone().append(autoClosedNode);
                     } else {
-                        autoClosedTags = autoClosedTags || [];
-                        autoClosedTags.push(unMatchedOpenTags.pop());
-                        stack.push(Util.getCloseUbbTag(t));
+                        autoClosedNode = node.clone();
                     }
+                    node = node.parent;
                 }
-                unMatchedOpenTags.push(tag);
-                stack.push(tag);
-                // if tag can contains autoClosedTags
-                if (autoClosedTags && Util.canContains(tag, autoClosedTags[autoClosedTags.length-1], ubbTagsOrder)) {
-                    Util.pushTagsReverse(autoClosedTags, unMatchedOpenTags, stack);
+
+                node.append(tag);
+                // if has autoClosedNode and tag can contains them, then complete immediately
+                if (autoClosedNode && Util.canContains(tag, autoClosedNode, ubbTagsOrder)) {
+                    tag.append(autoClosedNode);
+                    return Tree.getDeepestChild(autoClosedNode);
+                // or complete later
+                } else {
+                    return tag;
                 }
-                autoClosedTags = null;
             },
             /**
              * push close ubb tag into stack
-             * @param {array} unMatchedOpenTags
-             * @param {array} stack
-             * @param {object} closeTag tags to be push
+             * @param {array} node
+             * @param {string} tagName
              */
-            pushCloseUbbTag: function(unMatchedOpenTags, stack, closeTag) {
-                var tag, i, autoClosedTags, t, l;
-                for (i = unMatchedOpenTags.length-1; i>=0; i--) {
-                    tag = unMatchedOpenTags[i];
-                    // tag match
-                    if (closeTag && closeTag.name === tag.name) {
-                        l = unMatchedOpenTags.length - 1;
-                        // autoClosedTags
-                        while(i<l) {
-                            i++;
-                            t = unMatchedOpenTags.pop();
-                            autoClosedTags = autoClosedTags || [];
-                            autoClosedTags.push(t);
-                            stack.push(Util.getCloseUbbTag(t));
-                        }
-                        unMatchedOpenTags.pop(); // pop the matched tag
-                        stack.push(closeTag);
-                        Util.pushTagsReverse(autoClosedTags, unMatchedOpenTags, stack);
-                        autoClosedTags = null;
-                        return;
+            pushCloseUbbTag: function(node, tagName) {
+                var autoClosedNode;
+                while (!node.isRoot && node.name !== tagName) {
+                    if (autoClosedNode) {
+                        autoClosedNode = node.clone().append(autoClosedNode);
+                    } else {
+                        autoClosedNode = node.clone();
                     }
+                    node = node.parent;
                 }
-                // no match
-            },
-            /**
-             * push ubb tags into stack
-             * @param {array} stack
-             * @param {object} tags tags to be push
-             */
-            pushPrefixUbbTag: function(stack, tags) {
-                var i = tags.length-1;
-                for (; i>=0; i--) {
-                    stack.push(tags[i]);
-                }
-            },
-            /**
-             * push ubb close tags into stack reserved
-             * @param {array} stack
-             * @param {object} tags tags to be push
-             */
-            pushSuffixUbbTag: function(stack, tags) {
-                var i,l;
-                for (i=0,l=tags.length; i<l; i++) {
-                    stack.push(Util.getCloseUbbTag(tags[i]));
+
+                if (node.isRoot) {
+                    // ignore this tag
+                    return node;
+                } else {
+                    // autoClose
+                    node = node.parent;
+                    node.append(autoClosedNode);
+                    return autoClosedNode ? Tree.getDeepestChild(autoClosedNode) : node;
                 }
             },
             /**
-             * push '\n' into stack
-             * @param {array} openTags unMatchedOpenTags
-             * @param {array} stack
+             * push '\n'
+             * @param {object} node
              * @param {object} wrapUbbTags canWrap value
              */
-            pushLineUbbTag: function(openTags, stack, wrapUbbTags) {
-                var i, tag, inlineTags, j;
-
-                inlineTags = [];
-                // find latest inline open tags
-                for (j = openTags.length-1; j >= 0; j--) {
-                    tag = openTags[j];
-                    if (!wrapUbbTags[tag.name]) {
-                        inlineTags.push(tag);
+            pushLineUbbTag: function(node, wrapUbbTags) {
+                var autoClosedNode;
+                while (!node.isRoot && !wrapUbbTags[node.name]) {
+                    if (autoClosedNode) {
+                        autoClosedNode = node.clone().append(autoClosedNode);
                     } else {
-                        break;
+                        autoClosedNode = node.clone();
                     }
+                    node = node.parent;
                 }
 
-                // finded
-                if (inlineTags.length) {
-                    // push close tag
-                    Util.pushSuffixUbbTag(stack, inlineTags);
-                    stack.push('\n');
-                    // push open tag
-                    Util.pushPrefixUbbTag(stack, inlineTags);
-                // nope
-                } else {
-                    stack.push('\n');
-                }
+                node.append('\n');
+                // if can contains then complete immediately
+                node.append(autoClosedNode);
+                return autoClosedNode ? Tree.getDeepestChild(autoClosedNode) : node;
             },
             /**
              * html encode
@@ -643,11 +603,13 @@ var UBB = (function () {
              * @param {object} wrapUbbTags
              * @return {array} tag list
              */
-            scanUbbText: function(text, ubbTagsOrder, wrapUbbTags) {
+            scanUbbText: function(text, setting) {
                 // encode html
                 text = Util.htmlEncode(text);
                 text = text.replace(/\r\n/g, '\n'); // for IE hack
                 var c, r, tagName, tag, prevOpenTag, attr, isClose,
+                    ubbTagsOrder = setting.ubbTagsOrder,
+                    wrapUbbTags = setting.wrapUbbTags,
                     // state value represent next char not be escape
                     NOESCAPE = 0,
                     // state value represent next char should be escape
@@ -658,8 +620,10 @@ var UBB = (function () {
                     i = 0,
                     l = text.length,
                     buf = '',
-                    unMatchedOpenTags = [],
-                    stack = [];
+                    root = Tree.createNode(),
+                    node = root;
+                // mark root
+                root.isRoot = true;
                 for(; i<l; i++) {
                     c = text.charAt(i);
                     switch(c) {
@@ -672,7 +636,7 @@ var UBB = (function () {
                             state = NOESCAPE;
                         } else {
                             if (buf) {
-                                stack.push(buf);
+                                node.append(buf);
                             }
                             buf = '[';
                         }
@@ -687,30 +651,21 @@ var UBB = (function () {
                             if (r && r[2] && ((tagName = r[2].toLowerCase()) in ubbTagsOrder)) {
                                 // new tag
                                 isClose = !!r[1];
-                                if (isClose) {
-                                    tag = Util.getCloseUbbTag(tagName);
-                                } else {
+                                if (!isClose) {
                                     attr = buf.slice(r[2].length + (r[1] ? 2 : 1));
-                                    tag = attr ? {name: tagName, attr: attr} : Util.getStartUbbTag(tagName);
+                                    tag = Tree.createNode(tagName, attr);
                                 }
 
-                                // push tag
-                                prevOpenTag = unMatchedOpenTags[unMatchedOpenTags.length-1];
                                 // close
-                                if (tag.isClose) {
-                                    if (!prevOpenTag) {
-                                        // unused tag has to be clear
-                                        buf = '';
-                                        continue;
-                                    }
-                                    Util.pushCloseUbbTag(unMatchedOpenTags, stack, tag);
+                                if (isClose) {
+                                    node = Util.pushCloseUbbTag(node, tagName);
                                 // open
                                 } else {
-                                    Util.pushOpenUbbTag(unMatchedOpenTags, stack, tag, ubbTagsOrder);
+                                    node = Util.pushOpenUbbTag(node, tag, ubbTagsOrder);
                                 }
                             // not tag
                             } else {
-                                stack.push(buf + ']');
+                                node.append(buf + ']');
                             }
                             buf = '';
                         }
@@ -720,10 +675,10 @@ var UBB = (function () {
                             state = NOESCAPE;
                         }
                         if (buf) {
-                            stack.push(buf);
+                            node.append(buf);
                             buf = '';
                         }
-                        Util.pushLineUbbTag(unMatchedOpenTags, stack, wrapUbbTags);
+                        node = Util.pushLineUbbTag(node, wrapUbbTags);
                         break;
                     default:
                         if (state === ESCAPE) {
@@ -734,91 +689,148 @@ var UBB = (function () {
                     }
                 }
                 if (buf) {
-                    stack.push(buf);
+                    node.append(buf);
                 }
 
-                // complete all unmatched open tag
-                for (j = unMatchedOpenTags.length-1; j>=0; j--) {
-                    stack.push(Util.getCloseUbbTag(unMatchedOpenTags[j]));
+                return root;
+            },
+            /**
+             * parse ubb node to ubb text
+             * @param {object} node ubb node
+             * @param {string} sonString the ubb text of node's children
+             * @param {object} setting
+             * @param {object} state
+             * @return {string} html text of node and it's children
+             */
+            parseUbbNode: function(node, sonString, setting, state) {
+                var tagsParser = setting.tags,
+                    tagInfo;
+                if (node === '\n') {
+                    if (state.nobr) {
+                        state.nobr = false;
+                        return '';
+                    } else {
+                        return '<br/>';
+                    }
+                } else if (typeof node === 'string') {
+                    state.nobr = false;
+                    return node;
+                } else if ((tagInfo = tagsParser[node.name]) && tagInfo.parseUBB) {
+                    if (tagInfo.isBlock) {
+                        state.nobr = true;
+                    }
+                    return tagInfo.parseUBB(node, sonString, setting);
                 }
-                return stack;
+            },
+            /**
+             * fix ubb node to ubb text
+             * @param {object} node ubb node
+             * @param {string} sonString the ubb text of node's children
+             * @param {object} setting
+             * @return {string} ubb text of node and it's children
+             */
+            fixUbbNode: function(node, sonString, setting) {
+                if (typeof node === 'string') {
+                    return Util.ubbEscape(node);
+                } else {
+                    return '['+node.name+(node.attr || '')+']'+sonString+'[/'+node.name+']';
+                }
             }
         },
         /**
          * parse jquery node into html
-         * @param {object} node jquery object
+         * @param {object} node jquery object, must be a block element
          * @param {object} setting
          * @param {object} parent jquery object
          * @return {string} ubb text
          */
-        parseHtml = function(node, setting, parent) {
-            var i,l,
+        parseHtml = function(node, setting, state, notRoot) {
+            var i,l,isBlock,
                 re = [],
                 children = node.contents();
-            for(i=0,l=children.length; i<l; i++) {
-                re.push(parseHtml(children.eq(i), setting, node));
+            state = state || {};
+            if (!state.textStates) {
+                // add text state
+                state.textStates = [];
+            }
+
+            if (Util.isBlock(node)) {
+                state.blockContext = node;
+                isBlock = true;
+                // set default text state
+                //      0: nothing
+                //      1: last is text or other element
+                //      2: last is br element
+                state.textStates.push(0);
+            }
+            for (i=0,l=children.length; i<l; i++) {
+                re.push(parseHtml(children.eq(i), setting, state, true));
+                // reset blockContext
+                if (isBlock) {
+                    state.blockContext = node;
+                }
+            }
+
+            if (isBlock) {
+                state.textStates.pop();
             }
             // make sure container not to be parsed
-            if (parent) {
-                return Util.parseNode(node, re.join(''), setting);
+            if (notRoot) {
+                return Util.parseNode(node, re.join(''), setting, state);
             } else {
                 return re.join('');
             }
         },
         /**
          * parse ubb text into html text
-         * @param {string} ubb
-         * @param {object} setting 配置
+         * @param {object} node
+         * @param {object} setting
+         * @param {object} state
          * @return {string} html text
          */
-        parseUbb = function(ubb, setting) {
-            var i, l, tag, nextTag,
-                isStartWithNewLine = /^\n/,
-                str = '',
-                tags = Util.scanUbbText(ubb, setting.ubbTagsOrder, setting.wrapUbbTags),
-                tagsParser = setting.tags,
-                tagInfo;
-            for (i=0,l=tags.length; i<l; i++) {
-                tag = tags[i];
-                if (tag === '\n') {
-                    str += '<br/>';
-                } else if (typeof tag === 'string') {
-                    str += tag;
-                } else {
-                    tagInfo = tagsParser[tag.name];
-                    str += tagInfo.parseUBB(tag, i, tags, setting);
-                    // remove first new line after a close block tag
-                    if (tagInfo.isBlock && tag.isClose) {
-                        nextTag = tags[i+1];
-                        if (nextTag && nextTag === '\n') {
-                            tags[i+1] = '';
-                        }
-                    }
+        parseUbb = function(node, setting, state) {
+            var i, l,
+                re = [];
+            state = state || {};
+
+            if (node.isNode) {
+                for (i=0,l=node.length; i<l; i++) {
+                    re.push(parseUbb(node[i], setting, state));
                 }
             }
-            return str;
+
+            // root node has no meaning
+            if (!node.isRoot) {
+                return Util.parseUbbNode(node, re.join(''), setting, state);
+            } else {
+                return re.join('');
+            }
         },
         /**
          * auto complete ubb string
          * fix error placed tags
-         * @param {string} ubb
+         * @param {object} node
          * @param {object} setting
+         * @param {object} state
          * @return {string} fixed ubb string
          */
-        fixUbb = function(ubb, setting) {
-            var i, l, tag, nextTag,
-                isStartWithNewLine = /^\n/,
-                str = '',
-                tags = Util.scanUbbText(ubb, setting.ubbTagsOrder, setting.wrapUbbTags);
-            for (i=0,l=tags.length; i<l; i++) {
-                tag = tags[i];
-                if (typeof tag === 'string') {
-                    str += Util.ubbEscape(tag);
-                } else {
-                    str += '[' + (tag.isClose ? '/' : '') + tag.name + (tag.attr || '') + ']';
+        fixUbb = function(node, setting, state) {
+            var i, l,
+                re = [];
+            state = state || {};
+
+            if (node.isNode) {
+                for (i=0,l=node.length; i<l; i++) {
+                    re.push(fixUbb(node[i], setting, state));
                 }
             }
-            return str;
+
+            // root node has no meaning
+            if (!node.isRoot) {
+                return Util.fixUbbNode(node, re.join(''), setting, state);
+            } else {
+                return re.join('');
+            }
         };
 
     /**
@@ -869,7 +881,7 @@ var UBB = (function () {
     }
     UBB.Util = Util;
     /**
-     * @param {object} $dom jquery
+     * @param {object} $dom jquery, must be a block element
      * @return {string} ubb text
      */
     UBB.prototype.HTMLtoUBB = function ($dom) {
@@ -880,7 +892,7 @@ var UBB = (function () {
      * @return {string} html text
      */
     UBB.prototype.UBBtoHTML = function(ubb) {
-        return parseUbb(ubb, this.setting);
+        return parseUbb(Util.scanUbbText(ubb, this.setting), this.setting);
     };
     /**
      * fix error ubb text
@@ -888,7 +900,7 @@ var UBB = (function () {
      * @return {string} fixed ubb text
      */
     UBB.prototype.fixUBB = function(ubb) {
-        return fixUbb(ubb, this.setting);
+        return fixUbb(Util.scanUbbText(ubb, this.setting), this.setting);
     };
     return UBB;
 })();
