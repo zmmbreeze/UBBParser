@@ -106,15 +106,16 @@ var UBB = (function () {
                  * parse html node to UBB text
                  * @param {string} nodeName nodeName
                  * @param {object} node jquery object
-                 * @param {string} sonString the ubb text of node's children
+                 * @param {string} re abstract node
                  * @param {object} setting
                  * @return {string} ubb text of node and it's children
                  */
-                parseHTML: function(nodeName, node, sonString) {
+                parseHTML: function(nodeName, node, re) {
                     if (nodeName === '#text') {
                         var container = node.parent();
                         if (Util.isBold(container.css('font-weight'))) {
-                            return '[bold]'+sonString+'[/bold]';
+                            re.prefix = '[bold]';
+                            re.suffix = '[/bold]';
                         }
                     }
                 },
@@ -146,11 +147,12 @@ var UBB = (function () {
                 noAttr: 1
             },
             italic: {
-                parseHTML: function(nodeName, node, sonString) {
+                parseHTML: function(nodeName, node, re) {
                     if (nodeName === '#text') {
                         var container = node.parent();
                         if (Util.isItalic(container.css('font-style'))) {
-                            return '[italic]'+sonString+'[/italic]';
+                            re.prefix = '[italic]';
+                            re.suffix = '[/italic]';
                         }
                     }
                 },
@@ -163,13 +165,14 @@ var UBB = (function () {
                 noAttr: 1
             },
             color: {
-                parseHTML: function(nodeName, node, sonString, setting) {
+                parseHTML: function(nodeName, node, re, setting) {
                     if (nodeName === '#text') {
                         var color,
                             container = node.parent();
                         color = Util.RGBtoHEX(container.css('color'));
                         if (color && color !== setting.defaultColor && !(container[0].nodeName.toLowerCase() === 'a' && color === setting.linkDefaultColor)) {
-                            return '[color='+color+']'+sonString+'[/color]';
+                            re.prefix = '[color='+color+']';
+                            re.suffix = '[/color]';
                         }
                     }
                 },
@@ -182,9 +185,10 @@ var UBB = (function () {
                 noAttr: 0
             },
             url: {
-                parseHTML: function(nodeName, node, sonString) {
+                parseHTML: function(nodeName, node, re) {
                     if (nodeName === 'a') {
-                        return '[url href='+node.attr('href')+']'+sonString+'[/url]';
+                        re.prefix = '[url href='+node.attr('href')+']';
+                        re.suffix = '[/url]';
                     }
                 },
                 parseUBB: function(node, sonString, setting) {
@@ -207,9 +211,9 @@ var UBB = (function () {
                 noAttr: 0
             },
             image: {
-                parseHTML: function(nodeName, node) {
+                parseHTML: function(nodeName, node, re) {
                     if (nodeName === 'img' && !node.data('src')) {
-                        return '[image]'+node.attr('src')+'[/image]';
+                        re.prefix = '[image]'+node.attr('src')+'[/image]';
                     }
                 },
                 parseUBB: function(node, sonString, setting) {
@@ -220,10 +224,10 @@ var UBB = (function () {
                 noAttr: 1
             },
             video: {
-                parseHTML: function(nodeName, node) {
+                parseHTML: function(nodeName, node, re) {
                     var src;
                     if (nodeName === 'img' && (src = node.data('src'))) {
-                        return '[video]'+src+'[/video]';
+                        re.prefix = '[video]'+src+'[/video]';
                     }
                 },
                 parseUBB: function(node, sonString, setting) {
@@ -242,9 +246,10 @@ var UBB = (function () {
                 noAttr: 1
             },
             blockquote: {
-                parseHTML: function(nodeName, node, sonString) {
+                parseHTML: function(nodeName, node, re) {
                     if (nodeName === 'blockquote') {
-                        return '[blockquote]'+sonString+'[/blockquote]';
+                        re.prefix = '[blockquote]';
+                        re.suffix = '[/blockquote]';
                     }
                 },
                 parseUBB: function(node, sonString, setting) {
@@ -256,16 +261,17 @@ var UBB = (function () {
                 noAttr: 1
             },
             ul: {
-                parseHTML: function(nodeName, node, sonString) {
+                parseHTML: function(nodeName, node, re) {
                     if (nodeName === 'ul') {
-                        return '[ul]\n'+sonString+'\n[/ul]';
+                        re.prefix = '[ul]\n';
+                        re.suffix = '\n[/ul]';
                     }
                     // in IE <= 7, node is block
                     if (nodeName === 'li' && !Util.isBlock(node)) {
                         var parent = node.parent()[0];
                         // if its parent is ul and it's not the last node
                         if (parent && parent.nodeName.toLowerCase() === 'ul' && node.next().length) {
-                            return sonString + '\n';
+                            re.suffix = '\n';
                         }
                     }
                 },
@@ -287,16 +293,17 @@ var UBB = (function () {
                 noAttr: 1
             },
             ol: {
-                parseHTML: function(nodeName, node, sonString) {
+                parseHTML: function(nodeName, node, re) {
                     if (nodeName === 'ol') {
-                        return '[ol]\n'+sonString+'\n[/ol]';
+                        re.prefix = '[ol]\n';
+                        re.suffix = '\n[/ol]';
                     }
                     // in IE <= 7, node is block
                     if (nodeName === 'li' && !Util.isBlock(node)) {
                         var parent = node.parent()[0];
                         // if its parent is ul and it's not the last node
                         if (parent && parent.nodeName.toLowerCase() === 'ol' && node.next().length) {
-                            return sonString + '\n';
+                            re.suffix = '\n';
                         }
                     }
                 },
@@ -318,9 +325,10 @@ var UBB = (function () {
                 noAttr: 1
             },
             ref: {
-                parseHTML: function(nodeName, node, sonString) {
+                parseHTML: function(nodeName, node, re) {
                     if (nodeName === 'div' && node[0].className === 'gui-ubb-ref') {
-                        return '[ref]'+sonString+'[/ref]';
+                        re.prefix = '[ref]';
+                        re.suffix = '[/ref]';
                     }
                 },
                 parseUBB: function(node, sonString, setting) {
@@ -343,7 +351,8 @@ var UBB = (function () {
             'table-footer-group': 1,
             'table-header-group': 1,
             'table-row': 1,
-            'table-row-group': 1
+            'table-row-group': 1,
+            'list-item': 1
         },
         Util = {
             /**
@@ -415,35 +424,51 @@ var UBB = (function () {
             /**
              * change text state
              *
-             *              text or other element     br
-             *         0    1/false                   2/false
-             *         1    1/false                   2/false
-             *         2    1/true                    2/true
+             *         0: nothing
+             *         1: text
+             *         2: br
+             *         3: block element
+             *
+             *              text 1      br 2         block element 3
+             *         0    1/false     2/false      3/false
+             *         1    1/false     2/false      3/true
+             *         2    1/true      2/true       3/true
+             *         3    1/true      2/true       3/true
              *
              * @param object state text state
-             * @param boolean isText incomming is text or not
+             * @param boolean incomming incomming element type:
+             *                              1: text
+             *                              2: br
+             *                              0: block element
+             *                              other element will not comming
              * @return booleam need a new line or not
              */
-            changeTextState: function(state, isText) {
+            changeState: function(state, incomming, re) {
                 var textStates = state.textStates,
                     last = textStates.length - 1,
-                    newLine = false;
-                if (textStates[last] === 2) {
-                     newLine = true;
-                }
-                textStates[last] = isText ? 1 : 2;
+                    map = {
+                        0: {1:0, 2:0, 3:0},
+                        1: {1:0, 2:0, 3:1},
+                        2: {1:1, 2:1, 3:1},
+                        3: {1:1, 2:1, 3:1}
+                    };
 
-                return newLine;
+                if (map[textStates[last]][incomming] && state.closestNode) {
+                    state.closestNode.suffix = (state.closestNode.suffix || '') + '\n';
+                }
+                textStates[last] = incomming;
+                state.closestNode = re;
             },
             /**
              * parse jquery node to ubb text
              * @param {object} node jquery object
-             * @param {string} sonString the ubb text of node's children
              * @param {object} setting
+             * @param {object} re
+             * @param {object} state
              * @return {string} ubb text of node and it's children
              */
-            parseNode: function(node, sonString, setting, state) {
-                var tagName, tagParser, tmp, prefix, suffix,
+            parseNode: function(node, setting, re, state) {
+                var tagName, tagParser, suffix, tmp, text, parserRe,
                     next, prev, parent,
                     nodeType = node[0].nodeType,
                     nodeName = node[0].nodeName.toLowerCase();
@@ -454,55 +479,59 @@ var UBB = (function () {
                 // text
                 if (nodeType !== 3) {
                     // node is block, height > 0, and it's not last element
-                    if (Util.isBlock(node) && (node.height() > 0)) {
+                    /* if (Util.isBlock(node) && (node.height() > 0)) {
                         parent = node.parent();
                         if ((!Util.isBlock(parent) && parent[0].nodeName.toLowerCase() !== 'li') || node.next().length) {
                             suffix = '\n';
                         }
-                    }
+                    }*/
 
-                    // change text state and set prefix
-                    if (Util.changeTextState(state, nodeName !== 'br')) {
-                        prefix = '\n';
+                    // change text state
+                    if (nodeName === 'br') {
+                        Util.changeState(state, 2, re);
+                    }
+                    if (re.isBlock) {
+                        re.hasHeight = node.height() > 0;
+                        Util.changeState(state, 3, re);
                     }
                 } else {
-                    sonString = node.text();
+                    text = node.text();
                     if (!setting.keepNewLine) {
-                        sonString = sonString.replace(/\n/g, '');
+                        text = text.replace(/\n/g, '');
                     }
                     if (!setting.keepWhiteSpace) {
-                        sonString = $.trim(sonString.replace(/\s{2,}/g, ' '));
+                        text = $.trim(text.replace(/\s{2,}/g, ' '));
                     }
-                    sonString = Util.ubbEscape(sonString);
-                    if (sonString === '') {
+                    text = Util.ubbEscape(text);
+                    if (text === '') {
                         return;
                     }
-                    if (Util.changeTextState(state, true)) {
-                        prefix = '\n';
-                    }
+                    re.prefix = text;
+                    Util.changeState(state, 1, re);
                 }
 
                 for (tagName in setting.tags) {
                     tagParser = setting.tags[tagName];
                     if (tagParser.parseHTML) {
-                        tmp = tagParser.parseHTML(nodeName, node, sonString, setting);
-                        if (tmp) {
-                            sonString = tmp;
-                        }
+                        tagParser.parseHTML(nodeName, node, re, setting);
                     }
                 }
 
-                console.log('----------');
-                console.log(sonString);
-                console.log(prefix);
-                console.log(suffix);
-                if (prefix) {
-                    sonString = prefix + sonString;
-                }
                 if (suffix) {
-                    sonString += suffix;
+                    re.suffix = (re.suffix || '') + suffix;
                 }
-                return sonString;
+                return re;
+            },
+            treeToUbb: function(re) {
+                var i, l, child,
+                    texts = [(re.prefix || '')];
+                for (i=0,l=re.length; i<l; i++) {
+                    child = re[i];
+                    texts.push(Util.treeToUbb(child));
+                }
+                texts.push(re.suffix || '');
+                console.log(texts);
+                return texts.join('');
             },
             /**
              * can father contains son
@@ -755,40 +784,40 @@ var UBB = (function () {
          * @return {string} ubb text
          */
         parseHtml = function(node, setting, state, notRoot) {
-            var i,l,isBlock,
-                re = [],
+            var i, l, child,
+                re = Tree.createNode(),
                 children = node.contents();
             state = state || {};
             if (!state.textStates) {
                 // add text state
-                state.textStates = [];
+                state.textStates = [];      // record the text state
             }
 
             if (Util.isBlock(node)) {
-                state.blockContext = node;
-                isBlock = true;
                 // set default text state
                 //      0: nothing
                 //      1: last is text or other element
                 //      2: last is br element
                 state.textStates.push(0);
+                re.isBlock = true;
             }
             for (i=0,l=children.length; i<l; i++) {
-                re.push(parseHtml(children.eq(i), setting, state, true));
-                // reset blockContext
-                if (isBlock) {
-                    state.blockContext = node;
+                child = parseHtml(children.eq(i), setting, state, true);
+                if (child) {
+                    re.append(child);
                 }
             }
 
-            if (isBlock) {
+            if (re.isBlock) {
                 state.textStates.pop();
+                state.closestNode = null;
             }
             // make sure container not to be parsed
             if (notRoot) {
-                return Util.parseNode(node, re.join(''), setting, state);
+                return Util.parseNode(node, setting, re, state);
             } else {
-                return re.join('');
+                // change tree to ubb string
+                return Util.treeToUbb(re);
             }
         },
         /**

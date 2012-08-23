@@ -64,7 +64,7 @@ describe('ubb.js:', function() {
                 $html.html(html);
                 return ubb.HTMLtoUBB($html);
             }
-            var re = toUbb('<div>\
+            var re;/* = toUbb('<div>\
 normal words!<b>bold</b> <span style="font-weight:bold;">bold</span> normal words! <i>italic</i> Test word~ <span style="font-style:italic;">italic</span> normal words! <a href="http://www.guokr.com/">guokr.com</a><br/>image:<br/><img src="http://guokr.com/skin/imgs/flash.jpg" /><br/>\
 video:<br/><img class="gui-ubb-flash" data-src="http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf" src="test.jpg" width="480" height="400"/>\
 <ul>\
@@ -92,7 +92,7 @@ video:\n\
 [/ol]\n\
 [blockquote]This is a blockquote!\n\
 And it\'s awesome![/blockquote]\n\
-[ref]http://www.guokr.com/[/ref]');
+[ref]http://www.guokr.com/[/ref]');*/
             re = toUbb('<p><br/></p><p><br/></p>');
             expect(re).toEqual('\n');
             re = toUbb('<p>aaa<br/></p>');
@@ -159,6 +159,14 @@ And it\'s awesome![/blockquote]\n\
             /*
             re = toUbb('aaa<br/><span></span>');
             expect(re).toEqual('aaa');
+            re = toUbb('aaa<br/><span>bbb</span>');
+            expect(re).toEqual('aaa\nbbb');
+            re = toUbb('<span>aaa<br/>bbb</span>');
+            expect(re).toEqual('aaa\nbbb');
+            re = toUbb('aaa<br/><div>bbb</div>');
+            expect(re).toEqual('aaa\nbbb');
+            re = toUbb('aaa<div>bbb</div>');
+            expect(re).toEqual('aaa\nbbb');
             re = toUbb('<a href="http://www.guokr.com/i/0014169607/">aaa</a><br><a href="http://www.guokr.com/i/0014169607/">bbb</a>');
             expect(re).toEqual('[url href=http://www.guokr.com/i/0014169607/]aaa[/url]\n[url href=http://www.guokr.com/i/0014169607/]bbb[/url]');
             */
