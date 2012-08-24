@@ -426,14 +426,14 @@ var UBB = (function () {
              *
              *         0: nothing
              *         1: text
-             *         2: br
+             *         2: br, or block element(height==0)
              *         3: block element
              *
-             *              text 1      br 2         block element 3
-             *         0    1/false     2/false      3/false
-             *         1    1/false     2/false      3/true
-             *         2    1/true      2/true       3/true
-             *         3    1/true      2/true       3/true
+             *              text 1      br 2         block element 3    pre string end with '\n' 4
+             *         0    1/false     2/false      3/false            0/false
+             *         1    1/false     2/false      3/true             0/false
+             *         2    1/true      2/true       3/true             0/true
+             *         3    1/true      2/true       3/true             0/true
              *
              * @param object state text state
              * @param boolean incomming incomming element type:
@@ -446,18 +446,27 @@ var UBB = (function () {
             changeState: function(state, incomming, re) {
                 var textStates = state.textStates,
                     last = textStates.length - 1,
-                    map = {
-                        0: {1:0, 2:0, 3:0},
-                        1: {1:0, 2:0, 3:1},
-                        2: {1:1, 2:1, 3:1},
-                        3: {1:1, 2:1, 3:1}
+                    lastNode = state.closestNodes[last],
+                    newLineRules = {
+                        0: {1:0, 2:0, 3:0, 4:0},
+                        1: {1:0, 2:0, 3:1, 4:0},
+                        2: {1:1, 2:1, 3:1, 4:1},
+                        3: {1:1, 2:1, 3:1, 4:1}
+                    },
+                    convertRules = {
+                        0: 0,
+                        1: 1,
+                        2: 2,
+                        3: 3,
+                        4: 0
                     };
 
-                if (map[textStates[last]][incomming] && state.closestNode) {
-                    state.closestNode.suffix = (state.closestNode.suffix || '') + '\n';
+                if (newLineRules[textStates[last]][incomming] && lastNode) {
+                    // add new line
+                    lastNode.suffix = (lastNode.suffix || '') + '\n';
                 }
-                textStates[last] = incomming;
-                state.closestNode = re;
+                textStates[last] = convertRules[incomming];
+                state.closestNodes[last] = re;
             },
             /**
              * parse jquery node to ubb text
@@ -469,30 +478,26 @@ var UBB = (function () {
              */
             parseNode: function(node, setting, re, state) {
                 var tagName, tagParser, suffix, tmp, text, parserRe,
-                    next, prev, parent,
+                    next, prev, parent, reList,
                     nodeType = node[0].nodeType,
                     nodeName = node[0].nodeName.toLowerCase();
+                re.link = node[0];
                 // comments
                 if (nodeType === 8) {
                     return;
                 }
                 // text
                 if (nodeType !== 3) {
-                    // node is block, height > 0, and it's not last element
-                    /* if (Util.isBlock(node) && (node.height() > 0)) {
-                        parent = node.parent();
-                        if ((!Util.isBlock(parent) && parent[0].nodeName.toLowerCase() !== 'li') || node.next().length) {
-                            suffix = '\n';
-                        }
-                    }*/
-
                     // change text state
                     if (nodeName === 'br') {
                         Util.changeState(state, 2, re);
                     }
                     if (re.isBlock) {
-                        re.hasHeight = node.height() > 0;
-                        Util.changeState(state, 3, re);
+                        if (node.height() > 0) {
+                            Util.changeState(state, 3, re);
+                        } else {
+                            Util.changeState(state, 2, re);
+                        }
                     }
                 } else {
                     text = node.text();
@@ -506,8 +511,13 @@ var UBB = (function () {
                     if (text === '') {
                         return;
                     }
-                    re.prefix = text;
-                    Util.changeState(state, 1, re);
+                    re.text = text;
+                    if (setting.keepNewLine && text.slice(-1) === '\n') {
+                        // if last is '\n' then change '\n' to br
+                        Util.changeState(state, 4, re);
+                    } else {
+                        Util.changeState(state, 1, re);
+                    }
                 }
 
                 for (tagName in setting.tags) {
@@ -525,12 +535,16 @@ var UBB = (function () {
             treeToUbb: function(re) {
                 var i, l, child,
                     texts = [(re.prefix || '')];
+                // is text
+                if (re.text) {
+                    texts.push(re.text);
+                }
+                // has children
                 for (i=0,l=re.length; i<l; i++) {
                     child = re[i];
                     texts.push(Util.treeToUbb(child));
                 }
                 texts.push(re.suffix || '');
-                console.log(texts);
                 return texts.join('');
             },
             /**
@@ -784,13 +798,15 @@ var UBB = (function () {
          * @return {string} ubb text
          */
         parseHtml = function(node, setting, state, notRoot) {
-            var i, l, child,
+            var i, l, j, jl, child,
                 re = Tree.createNode(),
                 children = node.contents();
             state = state || {};
             if (!state.textStates) {
                 // add text state
                 state.textStates = [];      // record the text state
+                // add closestNodes
+                state.closestNodes = [];
             }
 
             if (Util.isBlock(node)) {
@@ -799,18 +815,28 @@ var UBB = (function () {
                 //      1: last is text or other element
                 //      2: last is br element
                 state.textStates.push(0);
+                // set default closestNodes
+                state.closestNodes.push(null);
                 re.isBlock = true;
             }
             for (i=0,l=children.length; i<l; i++) {
                 child = parseHtml(children.eq(i), setting, state, true);
                 if (child) {
-                    re.append(child);
+                    // is node
+                    if (child.isNode) {
+                        re.append(child);
+                    // is node list (array)
+                    } else {
+                        for (j=0, jl=child.length; j<jl; j++) {
+                            re.append(child[j]);
+                        }
+                    }
                 }
             }
 
             if (re.isBlock) {
                 state.textStates.pop();
-                state.closestNode = null;
+                state.closestNodes.pop();
             }
             // make sure container not to be parsed
             if (notRoot) {

@@ -64,7 +64,7 @@ describe('ubb.js:', function() {
                 $html.html(html);
                 return ubb.HTMLtoUBB($html);
             }
-            var re;/* = toUbb('<div>\
+            var re = toUbb('<div>\
 normal words!<b>bold</b> <span style="font-weight:bold;">bold</span> normal words! <i>italic</i> Test word~ <span style="font-style:italic;">italic</span> normal words! <a href="http://www.guokr.com/">guokr.com</a><br/>image:<br/><img src="http://guokr.com/skin/imgs/flash.jpg" /><br/>\
 video:<br/><img class="gui-ubb-flash" data-src="http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf" src="test.jpg" width="480" height="400"/>\
 <ul>\
@@ -92,7 +92,7 @@ video:\n\
 [/ol]\n\
 [blockquote]This is a blockquote!\n\
 And it\'s awesome![/blockquote]\n\
-[ref]http://www.guokr.com/[/ref]');*/
+[ref]http://www.guokr.com/[/ref]');
             re = toUbb('<p><br/></p><p><br/></p>');
             expect(re).toEqual('\n');
             re = toUbb('<p>aaa<br/></p>');
@@ -156,7 +156,6 @@ And it\'s awesome![/blockquote]\n\
 这真不是蛋疼，这个实验还是得出了不少有用的结论的。比如贴上邮票的回收率更高，离邮筒近的回收率更高。这说明好人做好事也需要条件，如果太不方便，就懒得做了。看似蛋疼地验证了一个常识，但是严谨地告诉我们一个道理：要想让世界上有更多好人好事，就要为好人好事创造条件。');
             re = toUbb('aaa<br/><b>bbb</b>');
             expect(re).toEqual('aaa\n[bold]bbb[/bold]');
-            /*
             re = toUbb('aaa<br/><span></span>');
             expect(re).toEqual('aaa');
             re = toUbb('aaa<br/><span>bbb</span>');
@@ -169,7 +168,6 @@ And it\'s awesome![/blockquote]\n\
             expect(re).toEqual('aaa\nbbb');
             re = toUbb('<a href="http://www.guokr.com/i/0014169607/">aaa</a><br><a href="http://www.guokr.com/i/0014169607/">bbb</a>');
             expect(re).toEqual('[url href=http://www.guokr.com/i/0014169607/]aaa[/url]\n[url href=http://www.guokr.com/i/0014169607/]bbb[/url]');
-            */
             re = toUbb('aaa<br><blockquote>bbb</blockquote>');
             expect(re).toEqual('aaa\n[blockquote]bbb[/blockquote]');
 
@@ -202,12 +200,19 @@ And it\'s awesome![/blockquote]\n\
                 keepNewLine: true,
                 flashImage: 'test.jpg'
             });
-            re = toUbb('\n<p>aaa\nbbb\n</p>\n');
+            
+            re = toUbb('\naaa\nbbb\n\n');
             expect(re).toEqual('\naaa\nbbb\n\n');
+            re = toUbb('\n<p>aaa\nbbb</p>\n');
+            expect(re).toEqual('\naaa\nbbb\n\n');
+            re = toUbb('\n<p>aaa\nbbb\n</p>\n');
+            expect(re).toEqual('\naaa\nbbb\n\n\n');
+            re = toUbb('\n   <p>aaa\nbbb\n</p>\n');
+            expect(re).toEqual('\n   \naaa\nbbb\n\n\n');
         });
     });
  
-    it('Test: new line', function() {
+    it('UBBToHTML: new line', function() {
         runs(function() {
             var $html = $('#html'),
                 ubb = new UBB({
