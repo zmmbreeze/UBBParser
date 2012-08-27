@@ -97,6 +97,11 @@ var UBB = (function () {
                     n.attr = attr;
                 }
                 return n;
+            },
+            createTextNode: function(text) {
+                var textNode = Tree.createNode('#text');
+                textNode.value = text;
+                return textNode;
             }
         },
         ubbTagNameReg = /\[(\/)?([a-zA-Z]+)/,
@@ -199,8 +204,8 @@ var UBB = (function () {
                         // for [url]http://www.guokr.com/question/[bold]265263[/bold]/[/url]
                         for (i=0,l=node.length; i<l; i++) {
                             t = node[i];
-                            if (typeof t === 'string') {
-                                href += t;
+                            if (t.name === '#text') {
+                                href += t.value;
                             }
                         }
                     }
@@ -421,7 +426,7 @@ var UBB = (function () {
              * change text state
              *
              *         0: nothing
-             *         1: text
+             *         1: text and inline-block element
              *         2: br, or block element(height==0)
              *         3: block element
              *
@@ -545,7 +550,6 @@ var UBB = (function () {
                     texts.push(Util.treeToUbb(child));
                 }
                 texts.push(re.suffix || '');
-                console.log(re);
                 return texts.join('');
             },
             /**
@@ -628,7 +632,7 @@ var UBB = (function () {
                     node = node.parent;
                 }
 
-                node.append('\n');
+                node.append(Tree.createTextNode('\n'));
                 // if can contains then complete immediately
                 node.append(autoClosedNode);
                 return autoClosedNode ? Tree.getDeepestChild(autoClosedNode) : node;
@@ -690,7 +694,7 @@ var UBB = (function () {
                             state = NOESCAPE;
                         } else {
                             if (buf) {
-                                node.append(buf);
+                                node.append(Tree.createTextNode(buf));
                             }
                             buf = '[';
                         }
@@ -719,7 +723,7 @@ var UBB = (function () {
                                 }
                             // not tag
                             } else {
-                                node.append(buf + ']');
+                                node.append(Tree.createTextNode(buf + ']'));
                             }
                             buf = '';
                         }
@@ -729,7 +733,7 @@ var UBB = (function () {
                             state = NOESCAPE;
                         }
                         if (buf) {
-                            node.append(buf);
+                            node.append(Tree.createTextNode(buf));
                             buf = '';
                         }
                         node = Util.pushLineUbbTag(node, wrapUbbTags);
@@ -743,7 +747,7 @@ var UBB = (function () {
                     }
                 }
                 if (buf) {
-                    node.append(buf);
+                    node.append(Tree.createTextNode(buf));
                 }
 
                 return root;
@@ -759,16 +763,18 @@ var UBB = (function () {
             parseUbbNode: function(node, sonString, setting, state) {
                 var tagsParser = setting.tags,
                     tagInfo;
-                if (node === '\n') {
-                    if (state.nobr) {
-                        state.nobr = false;
-                        return '';
+                if (node.name === '#text') {
+                    if (node.value === '\n') {
+                        if (state.nobr) {
+                            state.nobr = false;
+                            return '';
+                        } else {
+                            return '<br/>';
+                        }
                     } else {
-                        return '<br/>';
+                        state.nobr = false;
+                        return node.value;
                     }
-                } else if (typeof node === 'string') {
-                    state.nobr = false;
-                    return node;
                 } else if ((tagInfo = tagsParser[node.name]) && tagInfo.parseUBB) {
                     if (tagInfo.isBlock) {
                         state.nobr = true;
@@ -784,8 +790,8 @@ var UBB = (function () {
              * @return {string} ubb text of node and it's children
              */
             fixUbbNode: function(node, sonString, setting) {
-                if (typeof node === 'string') {
-                    return Util.ubbEscape(node);
+                if (node.name === '#text') {
+                    return Util.ubbEscape(node.value);
                 } else {
                     return '['+node.name+(node.attr || '')+']'+sonString+'[/'+node.name+']';
                 }
@@ -801,6 +807,7 @@ var UBB = (function () {
         parseHtml = function(node, setting, state, notRoot) {
             var i, l, j, jl, child,
                 re = Tree.createNode(),
+                nodeType = node[0].nodeType,
                 children = node.contents();
             state = state || {};
             if (!state.textStates) {
@@ -810,7 +817,8 @@ var UBB = (function () {
                 state.closestNodes = [];
             }
 
-            if (Util.hasBlockBox(node)) {
+            // element has block box
+            if (nodeType === 1 && Util.hasBlockBox(node)) {
                 // set default text state
                 //      0: nothing
                 //      1: last is text or other element
@@ -823,15 +831,7 @@ var UBB = (function () {
             for (i=0,l=children.length; i<l; i++) {
                 child = parseHtml(children.eq(i), setting, state, true);
                 if (child) {
-                    // is node
-                    if (child.isNode) {
-                        re.append(child);
-                    // is node list (array)
-                    } else {
-                        for (j=0, jl=child.length; j<jl; j++) {
-                            re.append(child[j]);
-                        }
-                    }
+                    re.append(child);
                 }
             }
 
