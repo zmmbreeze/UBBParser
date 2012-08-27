@@ -82,7 +82,8 @@ video:<br/><img class="gui-ubb-flash" data-src="http://player.youku.com/player.p
 image:\n\
 [image]http://guokr.com/skin/imgs/flash.jpg[/image]\n\
 video:\n\
-[video]http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf[/video][ul]\n\
+[video]http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf[/video]\n\
+[ul]\n\
 [italic]italic[/italic]\n\
 [url href=http://www.guokr.com/]guokr.com[/url]\n\
 [/ul]\n\
@@ -168,6 +169,8 @@ And it\'s awesome![/blockquote]\n\
             expect(re).toEqual('aaa\nbbb');
             re = toUbb('<a href="http://www.guokr.com/i/0014169607/">aaa</a><br><a href="http://www.guokr.com/i/0014169607/">bbb</a>');
             expect(re).toEqual('[url href=http://www.guokr.com/i/0014169607/]aaa[/url]\n[url href=http://www.guokr.com/i/0014169607/]bbb[/url]');
+            re = toUbb('<a href="http://www.guokr.com/i/0014169607/">aaa</a><p>bbb</p>');
+            expect(re).toEqual('[url href=http://www.guokr.com/i/0014169607/]aaa[/url]\nbbb');
             re = toUbb('aaa<br><blockquote>bbb</blockquote>');
             expect(re).toEqual('aaa\n[blockquote]bbb[/blockquote]');
 

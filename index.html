@@ -103,7 +103,7 @@
   <li><button id="HTMLtoUBB">HTMLtoUBB</button></li>
   <li><button id="fixUBB">fixUBB</button></li>
 </ul>
-<div id="html" class="fl t_txt" style="white-space: pre;">
+<div id="html" class="fl t_txt">
 <p>aaa
 bbb
 </p>
@@ -112,7 +112,7 @@ bbb
     <script src="src/jquery.1.7.1.min.js"></script>
     <script src="src/ubb.js"></script>
     <script>
-    var parser = new UBB({keepNewLine: true});
+    var parser = new UBB();
         $ubb = $('#ubb'),
         $html = $('#html');
     $('#UBBtoHTML').click(function() {
