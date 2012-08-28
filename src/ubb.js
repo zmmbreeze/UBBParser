@@ -4,7 +4,7 @@
  * @version 0.2
  * @log 0.1 finish HTMLtoUBB
  *      0.2 finish UBBtoHTML
- *      0.3 fix newline and br bug in HTMLtoUBB
+ *      0.3 fix inline/inline-block and br bug in HTMLtoUBB
  */
 
 
