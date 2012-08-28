@@ -333,7 +333,7 @@ var UBB = (function () {
         closeTagCache = {},
         // cache for startTag
         startTagCache = {},
-        blockStype = {
+        blockStyle = {
             'block': 1,                             // div/p
             'table': 1,                             // table
             'table-caption': 1,                     // caption
@@ -351,10 +351,25 @@ var UBB = (function () {
             'input': 1,
             'select': 1
         },
+        preStyle = {
+            'pre': 1,
+            'pre-wrap': 1,
+            'pre-line': 1
+        },
+        spaceStyle = {
+            'pre': 1,
+            'pre-wrap': 1
+        },
         Util = {
+            /**
+             * is inline-block element. In IE6/7 inline replacedElement act like inline-block.
+             * Can't deal with haslayout, sad.
+             * @param {object} node jquery object
+             * @return {boolean}
+             */
             isInlineBlock: function(node, nodeName) {
                 var display = node.css('display');
-                return display === 'inline-block' || (display === 'inline' && replacedElement[nodeName]);
+                return !!(display === 'inline-block' || (display === 'inline' && replacedElement[nodeName]));
             },
             /**
              * if node is block a line.
@@ -362,7 +377,32 @@ var UBB = (function () {
              * @return {boolean}
              */
             hasBlockBox: function(node) {
-                return blockStype[node.css('display')];
+                return !!(blockStyle[node.css('display')]);
+            },
+            /**
+             * if node is keep new line
+             * @param {object} node jquery object
+             * @return {number}
+             *                  0 not keep new line
+             *                  1 keep new line except last one
+             *                  2 keep new line except first and last one
+             */
+            isKeepNewLine: function(node, nodeName) {
+                if (nodeName === 'pre' || nodeName === 'textarea') {
+                    return 2;
+                }
+                if (preStyle[node.css('white-space')]) {
+                    return 1;
+                }
+                return 0;
+            },
+            /**
+             * if node is keep white space
+             * @param {object} node jquery object
+             * @return {boolean}
+             */
+            isKeepWhiteSpace: function(node) {
+                return !!(spaceStyle[node.css('white-space')]);
             },
             /**
              * if fontWeight is bold
@@ -431,23 +471,17 @@ var UBB = (function () {
              *         3: block element
              *
              *              text 1      br 2         block element 3    pre string end with '\n' 4   inline 5
-             *         0    1/false     2/false      3/false            0/false                      0/false
-             *         1    1/false     2/false      3/true             0/false                      1/false
-             *         2    1/true      2/true       3/true             0/true                       2/false
-             *         3    1/true      2/true       3/true             0/true                       3/false
+             *         0    1/false     2/false      3/false            2/false                      0/false
+             *         1    1/false     2/false      3/true             2/false                      1/false
+             *         2    1/true      2/true       3/true             2/true                       2/false
+             *         3    1/true      2/true       3/true             2/true                       3/false
              *
-             * @param object state text state
-             * @param boolean incomming incomming element type:
-             *                              1: text
-             *                              2: br
-             *                              0: block element
-             *                              other element will not comming
-             * @return booleam need a new line or not
+             * @param {object} boxState
+             * @param {number} incomming incomming element type
              */
-            changeState: function(state, incomming, re) {
-                var textStates = state.textStates,
-                    last = textStates.length - 1,
-                    lastNode = state.closestNodes[last],
+            changeState: function(boxState, incomming, re) {
+                var node = boxState.node,
+                    key = boxState.key,
                     newLineRules = {
                         0: {1:0, 2:0, 3:0, 4:0, 5:0},
                         1: {1:0, 2:0, 3:1, 4:0, 5:0},
@@ -462,28 +496,33 @@ var UBB = (function () {
                         4: 0
                     };
 
-                if (newLineRules[textStates[last]][incomming] && lastNode) {
+                if (newLineRules[key][incomming] && node) {
                     // add new line
-                    lastNode.suffix = (lastNode.suffix || '') + '\n';
+                    node.suffix = (node.suffix || '') + '\n';
                 }
                 if (incomming in convertRules) {
-                    textStates[last] = convertRules[incomming];
+                    boxState.key = convertRules[incomming];
                 }
-                state.closestNodes[last] = re;
+                boxState.node = re;
             },
             /**
              * parse jquery node to ubb text
              * @param {object} node jquery object
+             * @param {string} nodeName
+             * @param {string} nodeType
              * @param {object} setting
              * @param {object} re
              * @param {object} state
              * @return {string} ubb text of node and it's children
              */
-            parseNode: function(node, setting, re, state) {
+            parseNode: function(node, nodeName, nodeType, setting, re, state) {
                 var tagName, tagParser, suffix, tmp, text, parserRe,
-                    next, prev, parent, reList,
-                    nodeType = node[0].nodeType,
-                    nodeName = node[0].nodeName.toLowerCase();
+                    next, prev, parent, reList, keepNewLine, keepWhiteSpace,
+                    trimStartNewLine, trimEndNewLine,
+                    boxStates = state.boxStates,
+                    textStates = state.textStates,
+                    boxState = boxStates[boxStates.length - 1],
+                    textState = textStates[textStates.length - 1];
                 re.link = node[0];
                 // comments
                 if (nodeType === 8) {
@@ -491,38 +530,63 @@ var UBB = (function () {
                 }
                 // text
                 if (nodeType !== 3) {
-                    // change text state
                     if (nodeName === 'br') {
-                        Util.changeState(state, 2, re);
+                        Util.changeState(boxState, 2, re);
                     }
                     if (re.hasBlockBox) {
                         if (node.height() > 0) {
-                            Util.changeState(state, 3, re);
+                            Util.changeState(boxState, 3, re);
                         } else {
-                            Util.changeState(state, 2, re);
+                            Util.changeState(boxState, 2, re);
                         }
                     } else {
-                        Util.changeState(state, Util.isInlineBlock(node, nodeName) ? 1 : 5, re);
+                        Util.changeState(boxState, Util.isInlineBlock(node, nodeName) ? 1 : 5, re);
                     }
                 } else {
-                    text = node.text();
-                    if (!setting.keepNewLine) {
-                        text = text.replace(/\n/g, '');
+                    text = node.text().replace(/\r\n/g, '\n');
+                    keepNewLine = textState.keepNewLine;
+                    keepWhiteSpace = textState.keepWhiteSpace;
+
+                    if (!keepNewLine) {
+                        // trim \n
+                        // \n ==> ''
+                        text = text.replace(/^(?:\r\n|\n)|(?:\r\n|\n)$/g, '')
+                                   .replace(/\n/g, ' ');
                     }
-                    if (!setting.keepWhiteSpace) {
-                        text = $.trim(text.replace(/\s{2,}/g, ' '));
+
+                    if (!keepWhiteSpace) {
+                        // whitespace == \u0020, charCode == 32
+                        // zero advance width space == \u200B
+                        // fixed-width spaces == \u200A || \u3000 || \u2000
+                        // non-breaking space(&nbsp;) == \u00A0, charCode == 160
+
+                        // trim whitespace
+                        // collapse whitespace
+                        // keep nont-breaking space
+                        text = text.replace(/^[\u0020\u200B\u200A\u3000\u2000]*|[\u0020\u200B\u200A\u3000\u2000]*$/g, '')
+                                   .replace(/[\u0020\u200B\u200A\u3000\u2000]{2,}/g, ' ');
                     }
+
                     text = Util.ubbEscape(text);
                     if (text === '') {
                         return;
                     }
                     re.text = text;
-                    if (setting.keepNewLine && text.slice(-1) === '\n') {
-                        // if last is '\n' then change '\n' to br
-                        Util.changeState(state, 4, re);
+
+                    // console.logit && console.log(boxState);
+                    // console.logit && console.log(textState);
+                    trimStartNewLine = (keepNewLine === 2) && (text.slice(0, 1) === '\n') && (boxState.key === 0 || boxState.key === 3);
+                    trimEndNewLine = keepNewLine && (text.length > 1) && (text.slice(-1) === '\n');
+
+                    if (trimEndNewLine) {
+                        // skip last '\n'
+                        // if last is '\n' change to state 4
+                        re.text = text.slice(0, -1);
+                        Util.changeState(boxState, 4, re);
                     } else {
-                        Util.changeState(state, 1, re);
+                        Util.changeState(boxState, 1, re);
                     }
+                    // console.logit && console.log(re.text);
                 }
 
                 for (tagName in setting.tags) {
@@ -808,40 +872,51 @@ var UBB = (function () {
             var i, l, j, jl, child,
                 re = Tree.createNode(),
                 nodeType = node[0].nodeType,
+                nodeName = node[0].nodeName.toLowerCase(),
                 children = node.contents();
-            state = state || {};
-            if (!state.textStates) {
-                // add text state
-                state.textStates = [];      // record the text state
-                // add closestNodes
-                state.closestNodes = [];
+            // init
+            if (!state) {
+                state = {};
+                state.boxStates = [];      // record the block box state
+                state.textStates = [];     // record the text state: keepNewLine and keepWhiteSpace
             }
 
-            // element has block box
-            if (nodeType === 1 && Util.hasBlockBox(node)) {
-                // set default text state
-                //      0: nothing
-                //      1: last is text or other element
-                //      2: last is br element
-                state.textStates.push(0);
-                // set default closestNodes
-                state.closestNodes.push(null);
-                re.hasBlockBox = true;
+            // push state
+            if (nodeType === 1) {
+                // element has block box
+                if (Util.hasBlockBox(node)) {
+                    state.boxStates.push({
+                        key: 0,
+                        node: null
+                    });
+                    re.hasBlockBox = true;
+                }
+                state.textStates.push({
+                    keepNewLine: Util.isKeepNewLine(node, nodeName),
+                    keepWhiteSpace: Util.isKeepNewLine(node)
+                });
             }
+
+            // parse children
             for (i=0,l=children.length; i<l; i++) {
                 child = parseHtml(children.eq(i), setting, state, true);
+                // add relationship
                 if (child) {
                     re.append(child);
                 }
             }
 
-            if (re.hasBlockBox) {
+            // pop state
+            if (nodeType === 1) {
                 state.textStates.pop();
-                state.closestNodes.pop();
             }
+            if (re.hasBlockBox) {
+                state.boxStates.pop();
+            }
+
             // make sure container not to be parsed
             if (notRoot) {
-                return Util.parseNode(node, setting, re, state);
+                return Util.parseNode(node, nodeName, nodeType, setting, re, state);
             } else {
                 // change tree to ubb string
                 return Util.treeToUbb(re);
@@ -909,15 +984,6 @@ var UBB = (function () {
                             defaultColor: '#000000',
                             // color of a elment
                             linkDefaultColor: '#006699',
-                            // if false,
-                            //     leading or tailing white space will be removed,
-                            //     other space will be trim to one,
-                            //     white space include &nbsp;
-                            keepWhiteSpace: true,
-                            // if true,
-                            //     keep new line space.
-                            // make sure white-space is pre when use it.
-                            keepNewLine: false,
                             // flash image to show
                             flashImage: '/skin/imgs/flash.png'
                        }, setting);

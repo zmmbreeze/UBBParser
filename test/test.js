@@ -183,35 +183,56 @@ And it\'s awesome![/blockquote]\n\
                 ubb = new UBB({
                     defaultColor: '#333333',
                     linkDefaultColor: '#006688',
-                    keepWhiteSpace: false,
                     flashImage: 'test.jpg'
                 });
             function toUbb(html) {
                 $html.html(html);
                 return ubb.HTMLtoUBB($html);
             }
+            // keepNewLine
+            // KeepWhiteSpace
+            $html.css('white-space', 'pre');
 
             var re = toUbb('<p>   aaaa   </p>');
+            expect(re).toEqual('   aaaa   ');
+            re = toUbb('<p>&nbsp;aaaa&nbsp;</p>');
+            expect(re).toEqual('\u00A0aaaa\u00A0');
+            re = toUbb('<p>&nbsp;aa   &nbsp;   aa&nbsp;</p>');
+            expect(re).toEqual('\u00A0aa   \u00A0   aa\u00A0');
+
+            re = toUbb('\naaa\nbbb\n\n');
+            expect(re).toEqual('\naaa\nbbb\n');
+
+            console.logit = true;
+            re = toUbb('\n<p>aaa\nbbb</p>\n');
+            console.log(re);
+            console.logit = false;
+            expect(re).toEqual('\naaa\nbbb');
+
+            re = toUbb('\n<p>aaa\nbbb\n</p>\n');
+            expect(re).toEqual('\naaa\nbbb');
+            re = toUbb('\n   <p>aaa\nbbb\n</p>\n');
+            expect(re).toEqual('\n   \naaa\nbbb');
+
+            // not keepNewLine
+            // not KeepWhiteSpace
+            $html.css('white-space', 'normal');
+
+            re = toUbb('<p>   aaaa   </p>');
             expect(re).toEqual('aaaa');
             re = toUbb('<p>&nbsp;aaaa&nbsp;</p>');
-            expect(re).toEqual('aaaa');
-            re = toUbb('<p>&nbsp;aa   &nbsp;  aa&nbsp;</p>');
-            expect(re).toEqual('aa aa');
-            ubb = new UBB({
-                defaultColor: '#333333',
-                linkDefaultColor: '#006688',
-                keepNewLine: true,
-                flashImage: 'test.jpg'
-            });
+            expect(re).toEqual('\u00A0aaaa\u00A0');
+            re = toUbb('<p>&nbsp;aa   &nbsp;   aa&nbsp;</p>');
+            expect(re).toEqual('\u00A0aa \u00A0 aa\u00A0');
             
             re = toUbb('\naaa\nbbb\n\n');
-            expect(re).toEqual('\naaa\nbbb\n\n');
+            expect(re).toEqual('aaa bbb');
             re = toUbb('\n<p>aaa\nbbb</p>\n');
-            expect(re).toEqual('\naaa\nbbb\n\n');
+            expect(re).toEqual('aaa bbb');
             re = toUbb('\n<p>aaa\nbbb\n</p>\n');
-            expect(re).toEqual('\naaa\nbbb\n\n\n');
+            expect(re).toEqual('aaa bbb');
             re = toUbb('\n   <p>aaa\nbbb\n</p>\n');
-            expect(re).toEqual('\n   \naaa\nbbb\n\n\n');
+            expect(re).toEqual('aaa bbb');
         });
     });
  
