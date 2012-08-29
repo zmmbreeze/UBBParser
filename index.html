@@ -50,53 +50,53 @@
     #html {
         color: #000;
     }
+    blockquote {
+        margin: 10px;
+        padding-left: 10px;
+        border-left: 3px solid #CCC;
+    }
     </style>
 </head>
 <body>
 <textarea id="ubb" name="" rows="30" cols="80" class="fl t_txt">
-[blockquote]引用@玉子桑 的话：那两杯奇怪的东西是神马！！！
-谁来解释下上边的白斑！！！[/blockquote]
-[url href=http://www.guokr.com/i/0014169607/]玉子
-桑[/url]serfsdfsd
-[bold][color=#999999]食品科学硕士，果壳[/color][/bold]
+[blockquote][url href=https://github.com/zmmbreeze/UBBParser][bold]UBBParser[/bold][/url] is awesome a UBB code parser in javascript.
+It is highly flexiable and easy to custom. It support all mayjor desktop browser.
+[/blockquote]
 
-<h1>测试encode html</h1>
-
-[image]http://www.guokr.com/skin/imgs/3-logo.png[/image]
-[ref]http://127.0.0.1:8000/example/UBB.html[/ref]
-
-[italic]斜体[bold]加粗 && 斜体[/bold]斜体[/italic]
-
-[ul][bold]
-这是第一条[/bold]
-可能的第二条
-
-这里是第四条
-
-
-[bold]最后一条
-[/bold][/ul]
+[bold]Feathure:[/bold]
 [ol]
-沙发
-板凳
-地板
-
-
-什么都没有了T T
+Convert UBB string to HTML string;
+Convert HTML element to UBB string, parse by element style not html string;
+Auto correct UBB string;
+Custom your own UBB tag;
 [/ol]
-[italic]
-斜
 
-体
-[bold]
-加粗 && 斜体
-[/bold]
-斜体
-[/italic]
+[bold]Require:[/bold]
+[ol]
+[url href=http://jquery.com/]jQuery[/url] (1.4.4+);
+[/ol]
 
-[BOLD]大小写无关[/bold]
-[bold]大小写无关[/BOLD]
-[BOLD]大小写无关[/BOLD]
+[bold]NOTE:[/bold]
+When convert HTML elements to UBB string, UBBParser can deal with whitespace and newline even in pre style.
+But because of IE 6/7/8's bug, it's not work very well in this situation.
+
+Examples:
+<h1>Escape html tags~</h1>
+
+[image]http://www.google.com.hk/images/srpr/logo3w.png[/image]
+[ref]A custom tag;[/ref]
+
+Auto correct:
+[ul][bold]First;
+Second;[/bold]
+Third;
+
+[bold]Last;
+[/bold][/ul]
+
+[BOLD]UBB tags are case-insensitive.[/bold]
+[bold]UBB tags are case-insensitive.[/BOLD]
+[BOLD]UBB tags are case-insensitive.[/BOLD]
 </textarea>
 <ul class="fl">
   <li><button id="UBBtoHTML">UBBtoHTML</button></li>
@@ -104,7 +104,7 @@
   <li><button id="fixUBB">fixUBB</button></li>
 </ul>
 <div id="html" class="fl t_txt" style="white-space:pre;">
-ccc2   1&nbsp;&nbsp;
+<br/>bbb
 </div>
 </dd>
     <script src="src/jquery.1.7.1.min.js"></script>
@@ -115,7 +115,7 @@ ccc2   1&nbsp;&nbsp;
         $html = $('#html');
     $('#UBBtoHTML').click(function() {
         $html.html(parser.UBBtoHTML($ubb.val()));
-    });
+    }).click();
     $('#HTMLtoUBB').click(function() {
         $ubb.val(parser.HTMLtoUBB($html));
     });

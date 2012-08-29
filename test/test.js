@@ -78,7 +78,7 @@ video:<br/><img class="gui-ubb-flash" data-src="http://player.youku.com/player.p
 <blockquote>This is a blockquote!<br/>And it\'s awesome!</blockquote>\
 <div class="gui-ubb-ref">http://www.guokr.com/</div>\
 </div>');
-            expect(re).toEqual('normal words![bold]bold[/bold] [bold]bold[/bold] normal words! [italic]italic[/italic] Test word~ [italic]italic[/italic] normal words! [url href=http://www.guokr.com/]guokr.com[/url]\n\
+            expect(re).toEqual('normal words![bold]bold[/bold][bold]bold[/bold]normal words![italic]italic[/italic]Test word~[italic]italic[/italic]normal words![url href=http://www.guokr.com/]guokr.com[/url]\n\
 image:\n\
 [image]http://guokr.com/skin/imgs/flash.jpg[/image]\n\
 video:\n\
@@ -96,6 +96,8 @@ And it\'s awesome![/blockquote]\n\
 [ref]http://www.guokr.com/[/ref]');
             re = toUbb('<p><br/></p><p><br/></p>');
             expect(re).toEqual('\n');
+            re = toUbb('aaa<p><br/></p>bbb');
+            expect(re).toEqual('aaa\n\nbbb');
             re = toUbb('<p>aaa<br/></p>');
             expect(re).toEqual('aaa');
             re = toUbb('<p><br/>aaa</p>');
@@ -179,7 +181,7 @@ And it\'s awesome![/blockquote]\n\
 
     it('HTMLtoUBB: keepWhiteSpace and keepNewLine', function() {
         runs(function() {
-            var $html = $('#html'),
+            var $html = $('#html2'),
                 ubb = new UBB({
                     defaultColor: '#333333',
                     linkDefaultColor: '#006688',
@@ -193,26 +195,99 @@ And it\'s awesome![/blockquote]\n\
             // KeepWhiteSpace
             $html.css('white-space', 'pre');
 
-            var re = toUbb('<p>   aaaa   </p>');
-            expect(re).toEqual('   aaaa   ');
+            var isIE678 = $.browser.msie && (parseInt($.browser.version, 10) <= 8),
+                re = toUbb('<p>   aaaa   </p>');
+            if (isIE678) {
+                expect(re).toEqual('aaaa ');
+            } else {
+                expect(re).toEqual('   aaaa   ');
+            }
             re = toUbb('<p>&nbsp;aaaa&nbsp;</p>');
             expect(re).toEqual('\u00A0aaaa\u00A0');
             re = toUbb('<p>&nbsp;aa   &nbsp;   aa&nbsp;</p>');
-            expect(re).toEqual('\u00A0aa   \u00A0   aa\u00A0');
-
+            if (isIE678) {
+                expect(re).toEqual('\u00A0aa \u00A0 aa\u00A0');
+            } else {
+                expect(re).toEqual('\u00A0aa   \u00A0   aa\u00A0');
+            }
             re = toUbb('\naaa\nbbb\n\n');
             expect(re).toEqual('\naaa\nbbb\n');
-
-            console.logit = true;
+            re = toUbb('\naaa\n\nbbb\n\n');
+            expect(re).toEqual('\naaa\n\nbbb\n');
             re = toUbb('\n<p>aaa\nbbb</p>\n');
-            console.log(re);
-            console.logit = false;
-            expect(re).toEqual('\naaa\nbbb');
-
+            if (isIE678) {
+                expect(re).toEqual('\naaa bbb');
+            } else {
+                expect(re).toEqual('\naaa\nbbb\n');
+            }
             re = toUbb('\n<p>aaa\nbbb\n</p>\n');
-            expect(re).toEqual('\naaa\nbbb');
+            if (isIE678) {
+                expect(re).toEqual('\naaa bbb ');
+            } else {
+                expect(re).toEqual('\naaa\nbbb\n');
+            }
             re = toUbb('\n   <p>aaa\nbbb\n</p>\n');
-            expect(re).toEqual('\n   \naaa\nbbb');
+            if (isIE678) {
+                expect(re).toEqual('\n   \naaa bbb ');
+            } else {
+                expect(re).toEqual('\n   \naaa\nbbb\n');
+            }
+            re = toUbb('\naaa\n<p>bbb</p>\n');
+            if (isIE678) {
+                expect(re).toEqual('\naaa \nbbb');
+            } else {
+                expect(re).toEqual('\naaa\nbbb\n');
+            }
+            re = toUbb('<pre>\naaa\n<p>bbb</p>\n</pre>');
+            if (!isIE678) {
+                expect(re).toEqual('aaa\nbbb\n');
+            }
+            re = toUbb('\n<pre>\naaa\n<p>bbb</p>\n</pre>\n');
+            if (!isIE678) {
+                expect(re).toEqual('\naaa\nbbb\n\n');
+            }
+
+            re = toUbb('aaa<p>\n</p>bbb');
+            if (!isIE678) {
+                expect(re).toEqual('aaa\n\nbbb');
+            }
+            re = toUbb('aaa<p><br/></p>bbb');
+            expect(re).toEqual('aaa\n\nbbb');
+            re = toUbb('aaa<pre>\n</pre>bbb');
+            if (!isIE678) {
+                expect(re).toEqual('aaa\nbbb');
+            }
+            re = toUbb('\n<br/>\n<br/>\n');
+            if (isIE678) {
+                expect(re).toEqual('\n\n');
+            } else {
+                expect(re).toEqual('\n\n\n\n');
+            }
+
+            re = toUbb('<p>aaa</p>\nbbb\n');
+            if (isIE678) {
+                expect(re).toEqual('aaa\nbbb ');
+            } else {
+                expect(re).toEqual('aaa\n\nbbb');
+            }
+            re = toUbb('<p>aaa</p>bbb\n');
+            if (isIE678) {
+                expect(re).toEqual('aaa\nbbb ');
+            } else {
+                expect(re).toEqual('aaa\nbbb');
+            }
+            re = toUbb('<br/>bbb\n');
+            if (isIE678) {
+                expect(re).toEqual('\nbbb ');
+            } else {
+                expect(re).toEqual('\nbbb');
+            }
+            re = toUbb('\n<br/>bbb\n');
+            if (isIE678) {
+                expect(re).toEqual('\n\nbbb ');
+            } else {
+                expect(re).toEqual('\n\nbbb');
+            }
 
             // not keepNewLine
             // not KeepWhiteSpace
@@ -224,7 +299,7 @@ And it\'s awesome![/blockquote]\n\
             expect(re).toEqual('\u00A0aaaa\u00A0');
             re = toUbb('<p>&nbsp;aa   &nbsp;   aa&nbsp;</p>');
             expect(re).toEqual('\u00A0aa \u00A0 aa\u00A0');
-            
+
             re = toUbb('\naaa\nbbb\n\n');
             expect(re).toEqual('aaa bbb');
             re = toUbb('\n<p>aaa\nbbb</p>\n');

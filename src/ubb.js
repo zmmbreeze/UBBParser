@@ -5,6 +5,7 @@
  * @log 0.1 finish HTMLtoUBB
  *      0.2 finish UBBtoHTML
  *      0.3 fix inline/inline-block and br bug in HTMLtoUBB
+ *      0.4 support white-space:pre except IE 678
  */
 
 
@@ -470,11 +471,11 @@ var UBB = (function () {
              *         2: br, or block element(height==0)
              *         3: block element
              *
-             *              text 1      br 2         block element 3    pre string end with '\n' 4   inline 5
-             *         0    1/false     2/false      3/false            2/false                      0/false
-             *         1    1/false     2/false      3/true             2/false                      1/false
-             *         2    1/true      2/true       3/true             2/true                       2/false
-             *         3    1/true      2/true       3/true             2/true                       3/false
+             *              text 1   |  br 2     |   block element 3 |  inline 4 |  pre string trim '\n' 5 |  pre string only trim start '\n' 6 | string only trim end '\n' 7 | not trim '\n' 8
+             *         0 |  1/false  |  2/false  |   3/false         |  0/false     2/false                |  1/false                           | 2/false                     | 1/false
+             *         1 |  1/false  |  2/false  |   3/true          |  1/false     NaN                    |  NaN                               | 2/false                     | 1/false
+             *         2 |  1/true   |  2/true   |   3/true          |  2/false     NaN                    |  NaN                               | 2/true                      | 1/true
+             *         3 |  1/true   |  2/true   |   3/true          |  3/false     NaN                    |  NaN                               | 2/true                      | 1/true
              *
              * @param {object} boxState
              * @param {number} incomming incomming element type
@@ -482,23 +483,27 @@ var UBB = (function () {
             changeState: function(boxState, incomming, re) {
                 var node = boxState.node,
                     key = boxState.key,
+                    count,
                     newLineRules = {
-                        0: {1:0, 2:0, 3:0, 4:0, 5:0},
-                        1: {1:0, 2:0, 3:1, 4:0, 5:0},
-                        2: {1:1, 2:1, 3:1, 4:1, 5:0},
-                        3: {1:1, 2:1, 3:1, 4:1, 5:0}
+                        0: {1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0},
+                        1: {1:0, 2:0, 3:1, 4:0,           7:0, 8:0},
+                        2: {1:1, 2:1, 3:1, 4:0,           7:1, 8:1},
+                        3: {1:1, 2:1, 3:1, 4:0,           7:1, 8:1}
                     },
                     convertRules = {
-                        0: 0,
                         1: 1,
                         2: 2,
                         3: 3,
-                        4: 0
+                        5: 2,
+                        6: 1,
+                        7: 2,
+                        8: 2
                     };
 
-                if (newLineRules[key][incomming] && node) {
+                count = newLineRules[key][incomming];
+                if (count && node) {
                     // add new line
-                    node.suffix = (node.suffix || '') + '\n';
+                    node.suffix = (node.suffix || '') + (count == 1 ? '\n' : '\n\n');
                 }
                 if (incomming in convertRules) {
                     boxState.key = convertRules[incomming];
@@ -523,34 +528,21 @@ var UBB = (function () {
                     textStates = state.textStates,
                     boxState = boxStates[boxStates.length - 1],
                     textState = textStates[textStates.length - 1];
-                re.link = node[0];
+
+                switch(nodeType) {
                 // comments
-                if (nodeType === 8) {
+                case 8:
                     return;
-                }
                 // text
-                if (nodeType !== 3) {
-                    if (nodeName === 'br') {
-                        Util.changeState(boxState, 2, re);
-                    }
-                    if (re.hasBlockBox) {
-                        if (node.height() > 0) {
-                            Util.changeState(boxState, 3, re);
-                        } else {
-                            Util.changeState(boxState, 2, re);
-                        }
-                    } else {
-                        Util.changeState(boxState, Util.isInlineBlock(node, nodeName) ? 1 : 5, re);
-                    }
-                } else {
-                    text = node.text().replace(/\r\n/g, '\n');
+                case 3:
+                    text = node[0].nodeValue.replace(/\r\n/g, '\n');
                     keepNewLine = textState.keepNewLine;
                     keepWhiteSpace = textState.keepWhiteSpace;
 
                     if (!keepNewLine) {
                         // trim \n
                         // \n ==> ''
-                        text = text.replace(/^(?:\r\n|\n)|(?:\r\n|\n)$/g, '')
+                        text = text.replace(/^\n|\n$/g, '')
                                    .replace(/\n/g, ' ');
                     }
 
@@ -571,22 +563,67 @@ var UBB = (function () {
                     if (text === '') {
                         return;
                     }
-                    re.text = text;
 
-                    // console.logit && console.log(boxState);
-                    // console.logit && console.log(textState);
-                    trimStartNewLine = (keepNewLine === 2) && (text.slice(0, 1) === '\n') && (boxState.key === 0 || boxState.key === 3);
+                    trimStartNewLine = (keepNewLine === 2) && (text.slice(0, 1) === '\n') && (boxState.key === 0);
                     trimEndNewLine = keepNewLine && (text.length > 1) && (text.slice(-1) === '\n');
 
-                    if (trimEndNewLine) {
-                        // skip last '\n'
-                        // if last is '\n' change to state 4
-                        re.text = text.slice(0, -1);
-                        Util.changeState(boxState, 4, re);
-                    } else {
+                    if (!keepWhiteSpace) {
+                        re.text = text;
+                        // not keep new line
                         Util.changeState(boxState, 1, re);
+                    } else {
+                        if (text === '\n') {
+                            re.text = '';
+                            if (trimStartNewLine) {
+                                // ignore first '\n'
+                                Util.changeState(boxState, 6, re);
+                            } else {
+                                // keep '\n'
+                                Util.changeState(boxState, 8, re);
+                            }
+                        } else {
+                            if (trimStartNewLine && trimEndNewLine) {
+                                // \naaaa\n or \n\n
+                                re.text = text.slice(1, -1);
+                                Util.changeState(boxState, 5, re);
+                            } else if (trimStartNewLine) {
+                                // \naaaa
+                                re.text = text.slice(1);
+                                Util.changeState(boxState, 6, re);
+                            } else if (trimEndNewLine) {
+                                // aaaa\n
+                                re.text = text.slice(0, -1);
+                                Util.changeState(boxState, 7, re);
+                            } else {
+                                // aaaa
+                                re.text = text;
+                                Util.changeState(boxState, 1, re);
+                            }
+                        }
                     }
-                    // console.logit && console.log(re.text);
+                    break;
+                // element
+                case 1:
+                    if (nodeName === 'br') {
+                        // br
+                        Util.changeState(boxState, 2, re);
+                    } else {
+                        if (re.hasBlockBox) {
+                            if (node.height() > 0) {
+                                // block element
+                                Util.changeState(boxState, 3, re);
+                            } else {
+                                // <div></div>
+                                Util.changeState(boxState, 2, re);
+                            }
+                        } else {
+                            // inline element
+                            Util.changeState(boxState, Util.isInlineBlock(node, nodeName) ? 1 : 4, re);
+                        }
+                    }
+                    break;
+                default:
+                    break;
                 }
 
                 for (tagName in setting.tags) {
@@ -980,12 +1017,9 @@ var UBB = (function () {
      */
     function UBB(setting) {
         this.setting = $.extend({
-                            // color of all text element
-                            defaultColor: '#000000',
-                            // color of a elment
-                            linkDefaultColor: '#006699',
-                            // flash image to show
-                            flashImage: '/skin/imgs/flash.png'
+                            defaultColor: '#000000',            // color of all text element
+                            linkDefaultColor: '#006699',        // color of a elment
+                            flashImage: '/skin/imgs/flash.png'  // flash image to show
                        }, setting);
         this.setting.tags = $.extend(tagsParser, this.setting.tags);
         this.setting.ubbTagsOrder = {};
@@ -1022,7 +1056,7 @@ var UBB = (function () {
      * @return {string} ubb text
      */
     UBB.prototype.HTMLtoUBB = function ($dom) {
-        return parseHtml($dom, this.setting);
+        return this.fixUBB(parseHtml($dom, this.setting));
     };
     /**
      * @param {string} ubb text
