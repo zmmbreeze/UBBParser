@@ -1,5 +1,5 @@
-UBBParser is awesome a UBB code parser in javascript.
-It is highly flexiable and easy to custom. It support all mayjor desktop browser.
+UBBParser is a awesome UBB code parser in javascript.
+It is highly flexible and easy to custom. Support major desktop browser like IE 6+,Firefox10+,Safari5+,Opera,Chrome.
 
 #License
 MIT.
@@ -53,5 +53,4 @@ jQuery (1.4.4+);
 Please check index.html for detail.
 
 #NOTE:
-When convert HTML elements to UBB string, UBBParser can deal with whitespace and newline even in pre style.
-But because of IE 6/7/8's bug, it's not work very well in this situation.
+When converting HTML elements to UBB string, UBBParser can deal with whitespace and newline in pre style. But in case of IE 6/7/8's bug, it's not work very well in this situation.

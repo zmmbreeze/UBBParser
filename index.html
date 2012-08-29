@@ -47,7 +47,16 @@
         list-style: decimal inside;
         margin-left: 20px;
     }
+    textarea {
+        width: 300px;
+    }
+    ul.fl li {
+        width: 80px;
+        list-style: none;
+    }
     #html {
+        margin-left: 10px;
+        width: 624px;
         color: #000;
     }
     blockquote {
@@ -59,8 +68,8 @@
 </head>
 <body>
 <textarea id="ubb" name="" rows="30" cols="80" class="fl t_txt">
-[blockquote][url href=https://github.com/zmmbreeze/UBBParser][bold]UBBParser[/bold][/url] is awesome a UBB code parser in javascript.
-It is highly flexiable and easy to custom. It support all mayjor desktop browser.
+[blockquote][url href=https://github.com/zmmbreeze/UBBParser][bold]UBBParser[/bold][/url] is a awesome UBB code parser in javascript.
+It is highly flexible and easy to custom. Support major desktop browser like IE 6+,Firefox10+,Safari5+,Opera,Chrome.
 [/blockquote]
 
 [bold]Feathure:[/bold]
@@ -77,10 +86,9 @@ Custom your own UBB tag;
 [/ol]
 
 [bold]NOTE:[/bold]
-When convert HTML elements to UBB string, UBBParser can deal with whitespace and newline even in pre style.
-But because of IE 6/7/8's bug, it's not work very well in this situation.
+When converting HTML elements to UBB string, UBBParser can deal with whitespace and newline in pre style. But in case of IE 6/7/8's bug, it's not work very well in this situation.
 
-Examples:
+[bold]Examples:[/bold]
 <h1>Escape html tags~</h1>
 
 [image]http://www.google.com.hk/images/srpr/logo3w.png[/image]
@@ -103,7 +111,7 @@ Third;
   <li><button id="HTMLtoUBB">HTMLtoUBB</button></li>
   <li><button id="fixUBB">fixUBB</button></li>
 </ul>
-<div id="html" class="fl t_txt" style="white-space:pre;">
+<div id="html" class="fl t_txt">
 <br/>bbb
 </div>
 </dd>

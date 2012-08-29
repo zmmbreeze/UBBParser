@@ -52,32 +52,6 @@ var UBB = (function () {
                 son.parent = father;
                 return father;
             },
-            /*
-            detach: function(node) {
-                if (!node) {
-                    node = this;
-                }
-                if (node.parent) {
-                    var i, l, flag,
-                        p = node.parent;
-                    for (i=0,l=p.length; i<l; i++) {
-                        if (p[i] === node) {
-                            flag = true;
-                        }
-                        if (flag) {
-                            p[i] = p[i+1];
-                        }
-                    }
-                    if (flag) {
-                        // pop last undefined element
-                        // make sure length was right
-                        p.pop();
-                    }
-                    node.parent = null;
-                }
-                return node;
-            },
-            */
             getDeepestChild: function(node) {
                 var next;
                 while (next = node[node.length-1]) {
