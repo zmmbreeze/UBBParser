@@ -1,18 +1,15 @@
-UBBParser is a awesome UBB code parser in javascript.
+UBBParser is a UBB code parser writing in javascript.
 It is highly flexible and easy to custom. Support major desktop browser like IE 6+,Firefox10+,Safari5+,Opera,Chrome.
 
 #License
 MIT.
 Be pleasure to fork and modify it.
 
-#Feathure:
+#Feature:
 Convert UBB string to HTML string;
 Convert HTML element to UBB string, parse by element style not html string;
 Auto correct UBB string;
 Custom your own UBB tag;
-
-#Require:
-jQuery (1.4.4+);
 
 #Demo:
     
@@ -37,8 +34,17 @@ jQuery (1.4.4+);
                         // return UBB string include sonString
                         return '<div class="gui-ubb-ref">' + sonString + '</div>';
                     },
+                    // string.
+                    // Specified which tag can be contained.
+                    // '' or undefined indicate it can't contian any tag.
+                    // '*' indicate it can contian any tag.
+                    canContains: 'bold,italic,color,url,image',
+                    // bool.
+                    // If true, then this tag can contains '\n'.
                     canWrap: 0,
-                    isBlock: 1,
+                    // bool.
+                    // If true, then the '\n' right after this tag should be ignore.
+                    isBlock: 0,
                     noAttr: 1
                 }
             }

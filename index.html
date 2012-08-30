@@ -3,72 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <title>UBB parser</title>
+    <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css" />
     <style type="text/css">
-    * {
-        margin: 0;
-        padding: 0;
-    }
     body {
-        margin: 20px;
-    }
-    .t_txt{
-        line-height: 20px;
-        padding: 4px 5px;
-        background-color: #FFF;
-        border: #ddd 1px solid;
-
-        -webkit-box-shadow: 0 2px 0 #f5f5f5 inset;
-        -moz-box-shadow: 0 2px 0 #f5f5f5 inset;
-        box-shadow: 0 2px 0 #f5f5f5 inset;
-
-        -webkit-transition: border linear 0.2s, box-shadow linear 0.2s;
-        -moz-transition: border linear 0.2s, box-shadow linear 0.2s;
-        transition: border linear 0.2s, box-shadow linear 0.2s;
-    }
-    .t_txt[disabled]{
-        background-color: #fbfbfb;
-    }
-    .t_txt:focus{
-        outline: none;
-        border: #87be44 1px solid;
-        -webkit-box-shadow: 0 2px 0 #f5f5f5 inset, 0 0 4px 1px #e8f3db;
-        -moz-box-shadow: 0 2px 0 #f5f5f5 inset, 0 0 4px 1px #e8f3db;
-        box-shadow: 0 2px 0 #f5f5f5 inset, 0 0 4px 1px #e8f3db;
-    }
-    .fl {
-        float: left;
-    }
-
-    ul li {
-        list-style: disc inside;
-        margin-left: 20px;
-    }
-    ol li {
-        list-style: decimal inside;
-        margin-left: 20px;
-    }
-    textarea {
-        width: 300px;
-    }
-    ul.fl li {
-        width: 80px;
-        list-style: none;
-    }
-    #html {
-        margin-left: 10px;
-        width: 624px;
-        color: #000;
+        padding-top: 60px;
+        padding-bottom: 40px;
     }
     blockquote {
         margin: 10px;
         padding-left: 10px;
         border-left: 3px solid #CCC;
     }
+    .gui-ubb-ref {
+        margin: 10px;
+        padding: 10px;
+        border: 1px solid #CCC;
+    }
+    .html {
+        word-wrap: break-word;
+    }
     </style>
 </head>
 <body>
-<textarea id="ubb" name="" rows="30" cols="80" class="fl t_txt">
-[blockquote][url href=https://github.com/zmmbreeze/UBBParser][bold]UBBParser[/bold][/url] is a awesome UBB code parser in javascript.
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+          <a class="brand" href="#">UBBParser</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="active"><a href="#">Home</a></li>
+              <li><a href="#Feature">Feature</a></li>
+              <li><a href="#API">API</a></li>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div>
+      </div>
+    </div>
+    <div class="container">
+        <div class="hero-unit">
+        <h1>UBBParser</h1>
+        <p>UBBParser is a UBB code parser writing in javascript. It is highly flexible and easy to custom. Support major desktop browser like IE 6+,Firefox10+,Safari5+,Opera,Chrome.</p>
+    </div>
+
+        <h2 id="Feature">Feature</h2>
+        <ul class="nav nav-tabs" id="myTab">
+          <li class="active"><a href="#HTMLtoUBB">HTMLtoUBB</a></li>
+          <li><a href="#UBBtoHTML">UBBtoHTML</a></li>
+          <li><a href="#fixUBB">fixUBB</a></li>
+        </ul>
+        <div id="myTabContent" class="tab-content">
+            <div class="tab-pane fade active in" id="HTMLtoUBB">
+                <div class="row">
+                    <div class="span4 well html">
+                        <blockquote><a href="https://github.com/zmmbreeze/UBBParser"><b>UBBParser</b></a> is a UBB code parser writing in javascript.<br/>It is highly flexible and easy to custom. Support major desktop browser like IE 6+,Firefox10+,Safari5+,Opera,Chrome.<br/></blockquote>
+                        <br/>
+                        <b>Feathure:</b>
+                        <br/>
+                        <ol>
+                            <li>Convert UBB string to HTML string;</li>
+                            <li>Convert HTML element to UBB string, <span style="color:#468847;">parse by element style not html string;</span></li>
+                            <li>Auto correct UBB string;</li>
+                            <li>Custom your own UBB tag;</li>
+                        </ol>
+                        <br/>
+                        <b>NOTE:</b>
+                        <p>When converting HTML elements to UBB string, UBBParser can deal with whitespace and newline in pre style.<br/> But in case of IE 6/7/8's bug, it's not work very well in this situation.<br/></p>
+                    </div>
+                    <div class="span2"><button class="btn btn-primary" type="button">HTMLtoUBB &gt;&gt;</button></div>
+                    <textarea rows="20" class="span5"></textarea>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="UBBtoHTML">
+                <div class="row">
+                    <div class="span4 well html"></div>
+                    <div class="span2"><button class="btn btn-primary" type="button">&lt;&lt;UBBtoHTML</button></div>
+                    <textarea rows="20" class="span5">
+[blockquote][url href=https://github.com/zmmbreeze/UBBParser][bold]UBBParser[/bold][/url] is a UBB code parser writing in javascript.
 It is highly flexible and easy to custom. Support major desktop browser like IE 6+,Firefox10+,Safari5+,Opera,Chrome.
 [/blockquote]
 
@@ -80,14 +95,14 @@ Auto correct UBB string;
 Custom your own UBB tag;
 [/ol]
 
-[bold]Require:[/bold]
-[ol]
-[url href=http://jquery.com/]jQuery[/url] (1.4.4+);
-[/ol]
-
 [bold]NOTE:[/bold]
-When converting HTML elements to UBB string, UBBParser can deal with whitespace and newline in pre style. But in case of IE 6/7/8's bug, it's not work very well in this situation.
-
+When converting HTML elements to UBB string, UBBParser can deal with whitespace and newline in pre style. But in case of IE 6/7/8's bug, it's not work very well in this situation.</textarea>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="fixUBB">
+                <div class="row">
+                    <div class="span2"><button class="btn btn-primary" type="button">fixUBB &gt;&gt;</button></div>
+                    <textarea rows="17" class="span10">
 [bold]Examples:[/bold]
 <h1>Escape html tags~</h1>
 
@@ -104,31 +119,90 @@ Third;
 
 [BOLD]UBB tags are case-insensitive.[/bold]
 [bold]UBB tags are case-insensitive.[/BOLD]
-[BOLD]UBB tags are case-insensitive.[/BOLD]
-</textarea>
-<ul class="fl">
-  <li><button id="UBBtoHTML">UBBtoHTML</button></li>
-  <li><button id="HTMLtoUBB">HTMLtoUBB</button></li>
-  <li><button id="fixUBB">fixUBB</button></li>
-</ul>
-<div id="html" class="fl t_txt">
-<br/>bbb
-</div>
-</dd>
-    <script src="src/jquery.1.7.1.min.js"></script>
-    <script src="src/ubb.js"></script>
-    <script>
-    var parser = new UBB();
-        $ubb = $('#ubb'),
-        $html = $('#html');
-    $('#UBBtoHTML').click(function() {
-        $html.html(parser.UBBtoHTML($ubb.val()));
-    }).click();
-    $('#HTMLtoUBB').click(function() {
-        $ubb.val(parser.HTMLtoUBB($html));
+[BOLD]UBB tags are case-insensitive.[/BOLD]</textarea>
+                </div>
+            </div>
+        </div>
+
+
+        <h2 id="API">API</h2>
+        <div class="row">
+            <pre>
+var parser = new UBB({
+        defaultColor: '#000000',            // [option] color of all text element
+        linkDefaultColor: '#006699',        // [option] color of a elment
+        flashImage: '/skin/imgs/flash.png', // [option] flash image to show
+        tags: {
+            newtagname: {
+                parseHTML: function(nodeName, node, re) {
+                    // define which dom node to convert
+                    // node is a jquery object
+                    if (nodeName === 'div' && node[0].className === 'gui-ubb-ref') {
+                        // return prefix string
+                        re.prefix = '[ref]' + (re.prefix || '');
+                        // return suffix string
+                        re.suffix = (re.suffix || '') + '[/ref]';
+                    }
+                },
+                parseUBB: function(node, sonString, setting) {
+                    // parser will find a matched tag for you
+                    // return UBB string include sonString
+                    return '&lt;div class="gui-ubb-ref"&gt;' + sonString + '&lt;/div&gt;';
+                },
+                // string.
+                // Specified which tag can be contained.
+                // '' or undefined indicate it can't contian any tag.
+                // '*' indicate it can contian any tag.
+                canContains: 'bold,italic,color,url,image',
+                // bool.
+                // If true, then this tag can contains '\n'.
+                canWrap: 0,
+                // bool.
+                // If true, then the '\n' right after this tag should be ignore.
+                isBlock: 0,
+                noAttr: 1
+            }
+        }
     });
-    $('#fixUBB').click(function() {
-        $ubb.val(parser.fixUBB($ubb.val()));
+// convert HTML element to UBB string
+parser.HTMLtoUBB($('#container'));
+// convert UBB string to HTML string
+parser.UBBtoHTML('[bold]aaa[/bold]');
+// auto correct UBB string
+parser.fixUBB('[bold]aaa');   // ==> echo [bold]aaa[/bold]
+// add tags forever
+// check src/extraTags.js for detail
+// UBB.addTags();
+            </pre>
+        </div>
+
+    </div>
+    <script src="src/ubb.js"></script>
+    <script src="src/extraTags.js"></script>
+    <script src="src/jquery.1.7.1.min.js"></script>
+    <script src="bootstrap/js/bootstrap.min.js"></script>
+    <script>
+    $('#myTab a').click(function (e) {
+        e.preventDefault();
+        $(this).tab('show');
+    });
+    var parser = new UBB({
+            defaultColor: '#333333',
+            linkDefaultColor: '#0088cc'
+        }),
+        $UBBtoHTML = $('#UBBtoHTML'),
+        $fixUBB = $('#fixUBB'),
+        $HTMLtoUBB = $('#HTMLtoUBB');
+
+    $UBBtoHTML.find('button').click(function() {
+        $UBBtoHTML.find('.html').html(parser.UBBtoHTML($UBBtoHTML.find('textarea').val()));
+    });
+    $HTMLtoUBB.find('button').click(function() {
+        $HTMLtoUBB.find('textarea').html(parser.HTMLtoUBB($HTMLtoUBB.find('.html')[0]));
+    });
+    $fixUBB.find('button').click(function() {
+        var textarea = $fixUBB.find('textarea');
+        textarea.val(parser.fixUBB(textarea.val()));
     });
     </script>
 </body>

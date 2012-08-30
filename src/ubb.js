@@ -1,16 +1,19 @@
 /**
- * UBB与html的转换库
- * @author mzhou
- * @version 0.2
+ * UBBParser
+ * @author mzhou / @zhoumm
  * @log 0.1 finish HTMLtoUBB
  *      0.2 finish UBBtoHTML
  *      0.3 fix inline/inline-block and br bug in HTMLtoUBB
  *      0.4 support white-space:pre except IE 678
+ *      0.5 clear useless code
+ *          remove jquery require
+ *          fix UBBtoHTML whitespace convert to &nbsp;
+ *          seperate tagParser
  */
 
 
 /*jshint undef:true, browser:true, noarg:true, curly:true, regexp:true, newcap:true, trailing:false, noempty:true, regexp:false, strict:true, evil:true, funcscope:true, iterator:true, loopfunc:true, multistr:true, boss:true, eqnull:true, eqeqeq:false, undef:true */
-/*global $:false */
+/*global*/
 
 var UBB = (function () {
     'use strict';
@@ -79,235 +82,15 @@ var UBB = (function () {
                 return textNode;
             }
         },
+        upperReg = /([A-Z])/g,
+        dashReg = /-([a-z])/g,
+        numReg = /^-?\d/,
+        numpxReg = /^-?\d+(?:px)?$/i,
         ubbTagNameReg = /\[(\/)?([a-zA-Z]+)/,
-        tagsParser = {
-            // lowerCase tag name
-            bold: {
-                /**
-                 * parse html node to UBB text
-                 * @param {string} nodeName nodeName
-                 * @param {object} node jquery object
-                 * @param {string} re abstract node
-                 * @param {object} setting
-                 * @return {string} ubb text of node and it's children
-                 */
-                parseHTML: function(nodeName, node, re) {
-                    if (nodeName === '#text') {
-                        var container = node.parent();
-                        if (Util.isBold(container.css('font-weight'))) {
-                            re.prefix = '[bold]' + (re.prefix || '');
-                            re.suffix = (re.suffix || '') + '[/bold]';
-                        }
-                    }
-                },
-                /**
-                 * parse UBB text to HTML text
-                 * @param {object} node object represent ubb tag.
-                 *                     eg:
-                 *                         tree node
-                 *                         string tag: 'This is a text'; (It's not contains '\n')
-                 *                         \n tag: '\n'.
-                 * @param {string} sonString
-                 * @param {object} setting
-                 * @return {string} html text
-                 */
-                parseUBB: function(node, sonString, setting) {
-                    return '<b>' + sonString + '</b>';
-                },
-                // string.
-                // Specified which tag can be contained.
-                // '' or undefined indicate it can't contian any tag.
-                // '*' indicate it can contian any tag.
-                canContains: 'bold,italic,color,url,image',
-                // bool.
-                // If true, then this tag can contains '\n'.
-                canWrap: 0,
-                // bool.
-                // If true, then the '\n' right after this tag should be ignore.
-                isBlock: 0,
-                noAttr: 1
-            },
-            italic: {
-                parseHTML: function(nodeName, node, re) {
-                    if (nodeName === '#text') {
-                        var container = node.parent();
-                        if (Util.isItalic(container.css('font-style'))) {
-                            re.prefix = '[italic]' + (re.prefix || '');
-                            re.suffix = (re.suffix || '') + '[/italic]';
-                        }
-                    }
-                },
-                parseUBB: function(node, sonString, setting) {
-                    return '<i>' + sonString + '</i>';
-                },
-                canContains: 'bold,italic,color,url,image',
-                canWrap: 0,
-                isBlock: 0,
-                noAttr: 1
-            },
-            color: {
-                parseHTML: function(nodeName, node, re, setting) {
-                    if (nodeName === '#text') {
-                        var color,
-                            container = node.parent();
-                        color = Util.RGBtoHEX(container.css('color'));
-                        if (color && color !== setting.defaultColor && !(container[0].nodeName.toLowerCase() === 'a' && color === setting.linkDefaultColor)) {
-                            re.prefix = '[color='+color+']' + (re.prefix || '');
-                            re.suffix = (re.suffix || '') + '[/color]';
-                        }
-                    }
-                },
-                parseUBB: function(node, sonString, setting) {
-                    return '<span style="color:'+(node.attr ? node.attr.slice(1) : '')+';">' + sonString + '</span>';
-                },
-                canContains: 'bold,italic,color,url,image',
-                canWrap: 0,
-                isBlock: 0,
-                noAttr: 0
-            },
-            url: {
-                parseHTML: function(nodeName, node, re) {
-                    if (nodeName === 'a') {
-                        re.prefix = '[url href='+node.attr('href')+']' + (re.prefix || '');
-                        re.suffix = (re.suffix || '') + '[/url]';
-                    }
-                },
-                parseUBB: function(node, sonString, setting) {
-                    var i, t, l,
-                        href = node.attr ? node.attr.replace(/^\ href\=/, '') : '';
-                    if (!node.attr) {
-                        // for [url]http://www.guokr.com/question/[bold]265263[/bold]/[/url]
-                        for (i=0,l=node.length; i<l; i++) {
-                            t = node[i];
-                            if (t.name === '#text') {
-                                href += t.value;
-                            }
-                        }
-                    }
-                    return '<a href="'+href+'">' + sonString + '</a>';
-                },
-                canContains: 'bold,italic,color,url,image',
-                canWrap: 0,
-                isBlock: 0,
-                noAttr: 0
-            },
-            image: {
-                parseHTML: function(nodeName, node, re) {
-                    if (nodeName === 'img' && !node.data('src')) {
-                        re.prefix = '[image]'+node.attr('src')+'[/image]' + (re.prefix || '');
-                    }
-                },
-                parseUBB: function(node, sonString, setting) {
-                    return sonString ? ('<img src="'+sonString+'"/>') : '';
-                },
-                canWrap: 0,
-                isBlock: 0,
-                noAttr: 1
-            },
-            video: {
-                parseHTML: function(nodeName, node, re) {
-                    var src;
-                    if (nodeName === 'img' && (src = node.data('src'))) {
-                        re.prefix = '[video]'+src+'[/video]' + (re.prefix || '');
-                    }
-                },
-                parseUBB: function(node, sonString, setting) {
-                    return sonString ? ('<img class="gui-ubb-flash" data-src="'+sonString+'" src="'+setting.flashImage+'" width="480" height="400"/>') : '';
-                },
-                canWrap: 0,
-                isBlock: 0,
-                noAttr: 1
-            },
-            flash: {
-                parseUBB: function(node, sonString, setting) {
-                    return sonString ? ('<img class="gui-ubb-flash" data-src="'+sonString+'" src="'+setting.flashImage+'" width="480" height="400"/>') : '';
-                },
-                canWrap: 0,
-                isBlock: 0,
-                noAttr: 1
-            },
-            blockquote: {
-                parseHTML: function(nodeName, node, re) {
-                    if (nodeName === 'blockquote') {
-                        re.prefix = '[blockquote]' + (re.prefix || '');
-                        re.suffix = (re.suffix || '') + '[/blockquote]';
-                    }
-                },
-                parseUBB: function(node, sonString, setting) {
-                    return '<blockquote>' + sonString + '</blockquote>';
-                },
-                canContains: '*',
-                canWrap: 1,
-                isBlock: 1,
-                noAttr: 1
-            },
-            ul: {
-                parseHTML: function(nodeName, node, re) {
-                    if (nodeName === 'ul') {
-                        re.prefix = '[ul]\n' + (re.prefix || '');
-                        re.suffix = (re.suffix || '') + '\n[/ul]';
-                    }
-                },
-                parseUBB: function(node, sonString, setting) {
-                    var i = 0,
-                        strs = sonString.split('<br/>'),
-                        j = strs[0] ? 0 : 1,
-                        l = strs[strs.length-1] ? 0 : -1,
-                        newStrs = [];
-                    l += strs.length;
-                    for (; j<l; i++, j++) {
-                        newStrs[i] = strs[j];
-                    }
-                    return '<ul><li>' + newStrs.join('</li><li>') + '</li></ul>';
-                },
-                canContains: '*',
-                canWrap: 1,
-                isBlock: 1,
-                noAttr: 1
-            },
-            ol: {
-                parseHTML: function(nodeName, node, re) {
-                    if (nodeName === 'ol') {
-                        re.prefix = '[ol]\n' + (re.prefix || '');
-                        re.suffix = (re.suffix || '') + '\n[/ol]';
-                    }
-                },
-                parseUBB: function(node, sonString, setting) {
-                    var i = 0,
-                        strs = sonString.split('<br/>'),
-                        j = strs[0] ? 0 : 1,
-                        l = strs[strs.length-1] ? 0 : -1,
-                        newStrs = [];
-                    l += strs.length;
-                    for (; j<l; i++, j++) {
-                        newStrs[i] = strs[j];
-                    }
-                    return '<ol><li>' + newStrs.join('</li><li>') + '</li></ol>';
-                },
-                canContains: '*',
-                canWrap: 1,
-                isBlock: 1,
-                noAttr: 1
-            },
-            ref: {
-                parseHTML: function(nodeName, node, re) {
-                    if (nodeName === 'div' && node[0].className === 'gui-ubb-ref') {
-                        re.prefix = '[ref]' + (re.prefix || '');
-                        re.suffix = (re.suffix || '') + '[/ref]';
-                    }
-                },
-                parseUBB: function(node, sonString, setting) {
-                    return '<div class="gui-ubb-ref">' + sonString + '</div>';
-                },
-                canWrap: 0,
-                isBlock: 1,
-                noAttr: 1
-            }
-        },
-        // cache for closeTag
-        closeTagCache = {},
-        // cache for startTag
-        startTagCache = {},
+        /*
+         * Custom tags
+         */
+        tagsParser = {},
         blockStyle = {
             'block': 1,                             // div/p
             'table': 1,                             // table
@@ -343,7 +126,7 @@ var UBB = (function () {
              * @return {boolean}
              */
             isInlineBlock: function(node, nodeName) {
-                var display = node.css('display');
+                var display = Util.getComputedStyle(node, 'display');
                 return !!(display === 'inline-block' || (display === 'inline' && replacedElement[nodeName]));
             },
             /**
@@ -352,7 +135,7 @@ var UBB = (function () {
              * @return {boolean}
              */
             hasBlockBox: function(node) {
-                return !!(blockStyle[node.css('display')]);
+                return !!(blockStyle[Util.getComputedStyle(node, 'display')]);
             },
             /**
              * if node is keep new line
@@ -366,7 +149,7 @@ var UBB = (function () {
                 if (nodeName === 'pre' || nodeName === 'textarea') {
                     return 2;
                 }
-                if (preStyle[node.css('white-space')]) {
+                if (preStyle[Util.getComputedStyle(node, 'white-space')]) {
                     return 1;
                 }
                 return 0;
@@ -377,57 +160,7 @@ var UBB = (function () {
              * @return {boolean}
              */
             isKeepWhiteSpace: function(node) {
-                return !!(spaceStyle[node.css('white-space')]);
-            },
-            /**
-             * if fontWeight is bold
-             * @param {string} fontWeight
-             * @return {boolean}
-             */
-            isBold: function(fontWeight) {
-                var number = parseInt(fontWeight, 10);
-                if(isNaN(number)) {
-                    return (/^(bold|bolder)$/).test(fontWeight);
-                } else {
-                    return number > 400;
-                }
-            },
-            /**
-             * if fontStyle is italic
-             * @param {string} fontStyle
-             * @return {boolean}
-             */
-            isItalic: function(fontStyle) {
-                return (/^(italic|oblique)$/).test(fontStyle);
-            },
-            /**
-             * change RGB to HEX
-             * @param {string} oldColor rbg color
-             * @return {string} hex color
-             */
-            RGBtoHEX: function (oldColor) {
-                var i,
-                    RGB2HexValue = '',
-                    numbers,
-                    regExp = /([0-9]+)[, ]+([0-9]+)[, ]+([0-9]+)/,
-                    array = regExp.exec(oldColor);
-                if (!array) {
-                    if (oldColor.length === 4) {
-                        numbers = oldColor.split('').slice(1);
-                        RGB2HexValue = '#';
-                        for (i=0; i<3; i++) {
-                            RGB2HexValue += numbers[i]+numbers[i];
-                        }
-                    } else {
-                        RGB2HexValue = oldColor;
-                    }
-                } else {
-                    for (i = 1; i < array.length; i++) {
-                        RGB2HexValue += ('0' + parseInt(array[i], 10).toString(16)).slice(-2);
-                    }
-                    RGB2HexValue = '#' + RGB2HexValue;
-                }
-                return RGB2HexValue;
+                return !!(spaceStyle[Util.getComputedStyle(node, 'white-space')]);
             },
             /**
              * escape '[' and ']' to '\[' and '\]'
@@ -495,8 +228,8 @@ var UBB = (function () {
              * @return {string} ubb text of node and it's children
              */
             parseNode: function(node, nodeName, nodeType, setting, re, state) {
-                var tagName, tagParser, suffix, tmp, text, parserRe,
-                    next, prev, parent, reList, keepNewLine, keepWhiteSpace,
+                var tagName, tagParser, text,
+                    keepNewLine, keepWhiteSpace,
                     trimStartNewLine, trimEndNewLine,
                     boxStates = state.boxStates,
                     textStates = state.textStates,
@@ -509,7 +242,7 @@ var UBB = (function () {
                     return;
                 // text
                 case 3:
-                    text = node[0].nodeValue.replace(/\r\n/g, '\n');
+                    text = node.nodeValue.replace(/\r\n/g, '\n');
                     keepNewLine = textState.keepNewLine;
                     keepWhiteSpace = textState.keepWhiteSpace;
 
@@ -583,7 +316,7 @@ var UBB = (function () {
                         Util.changeState(boxState, 2, re);
                     } else {
                         if (re.hasBlockBox) {
-                            if (node.height() > 0) {
+                            if (node.offsetHeight > 0) {
                                 // block element
                                 Util.changeState(boxState, 3, re);
                             } else {
@@ -607,11 +340,13 @@ var UBB = (function () {
                     }
                 }
 
-                if (suffix) {
-                    re.suffix = (re.suffix || '') + suffix;
-                }
                 return re;
             },
+            /**
+             * convert abstract node tree to UBB string
+             * @param {object} re root abstract node
+             * @return {string} UBB string
+             */
             treeToUbb: function(re) {
                 var i, l, child,
                     texts = [(re.prefix || '')];
@@ -848,7 +583,7 @@ var UBB = (function () {
                         }
                     } else {
                         state.nobr = false;
-                        return node.value;
+                        return node.value.replace(/\s/g, '&nbsp;');
                     }
                 } else if ((tagInfo = tagsParser[node.name]) && tagInfo.parseUBB) {
                     if (tagInfo.isBlock) {
@@ -874,7 +609,7 @@ var UBB = (function () {
         },
         /**
          * parse jquery node into html
-         * @param {object} node jquery object, must be a block element
+         * @param {object} node dom object, must be a block element
          * @param {object} setting
          * @param {object} parent jquery object
          * @return {string} ubb text
@@ -882,9 +617,9 @@ var UBB = (function () {
         parseHtml = function(node, setting, state, notRoot) {
             var i, l, j, jl, child,
                 re = Tree.createNode(),
-                nodeType = node[0].nodeType,
-                nodeName = node[0].nodeName.toLowerCase(),
-                children = node.contents();
+                nodeType = node.nodeType,
+                nodeName = node.nodeName.toLowerCase(),
+                children = node.childNodes;
             // init
             if (!state) {
                 state = {};
@@ -910,7 +645,7 @@ var UBB = (function () {
 
             // parse children
             for (i=0,l=children.length; i<l; i++) {
-                child = parseHtml(children.eq(i), setting, state, true);
+                child = parseHtml(children[i], setting, state, true);
                 // add relationship
                 if (child) {
                     re.append(child);
@@ -985,19 +720,91 @@ var UBB = (function () {
             }
         };
 
+
+    /**
+     * get css style
+     * copy from jquery src: https://github.com/jquery/jquery/blob/1.4.4/src/css.js
+     *
+     * @param {object} node dom element
+     * @param {string} cssStyleName
+     * @return {string} style
+     */
+    if (document.defaultView && document.defaultView.getComputedStyle) {
+        Util.getComputedStyle = function(node, cssStyleName) {
+            var computedStyle, re,
+                defaultView = node.ownerDocument.defaultView;
+            if (!defaultView) {
+                return;
+            }
+            cssStyleName = cssStyleName.replace(upperReg, '-$1').toLowerCase();
+            computedStyle = defaultView.getComputedStyle(node, null);
+            if (computedStyle) {
+                re = computedStyle.getPropertyValue(cssStyleName);
+            }
+            return re;
+        };
+    } else {
+        Util.getComputedStyle = function(node, cssStyleName) {
+            cssStyleName = cssStyleName.replace(dashReg, function($1) {
+                return $1.charAt(1).toUpperCase();
+            });
+            var left, rsLeft,
+                re = node.currentStyle && node.currentStyle[ cssStyleName ],
+                style = node.style;
+
+            // From the awesome hack by Dean Edwards
+            // http://erik.eae.net/archives/2007/07/27/18.54.15/#comment-102291
+
+            // If we're not dealing with a regular pixel number
+            // but a number that has a weird ending, we need to convert it to pixels
+            if ( !numpxReg.test( re ) && numReg.test( re ) ) {
+                // Remember the original values
+                left = style.left;
+                rsLeft = node.runtimeStyle.left;
+
+                // Put in the new values to get a computed value out
+                node.runtimeStyle.left = node.currentStyle.left;
+                style.left = cssStyleName === 'fontSize' ? '1em' : (re || 0);
+                re = style.pixelLeft + 'px';
+
+                // Revert the changed values
+                style.left = left;
+                node.runtimeStyle.left = rsLeft;
+            }
+
+            return re === '' ? 'auto' : re.toString();
+        };
+    }
+
     /**
      *  var ubbParser = new UBB();
      *  @param {object} setting
      */
     function UBB(setting) {
-        this.setting = $.extend({
+        this.setting = UBB.mix({
                             defaultColor: '#000000',            // color of all text element
                             linkDefaultColor: '#006699',        // color of a elment
                             flashImage: '/skin/imgs/flash.png'  // flash image to show
                        }, setting);
-        this.setting.tags = $.extend(tagsParser, this.setting.tags);
+        this.setting.tags = UBB.mix(tagsParser, this.setting.tags);
         this.setting.ubbTagsOrder = {};
         this.setting.wrapUbbTags = {};
+        // generate tag ubbTagsOrder and wrapUbbTags
+        //      ubbTagsOrder:
+        //          {
+        //              blockquote: true,       // can contain every tags
+        //              image: false,           // can't contain tag include self
+        //              bold: {                 // can contain bold and image tag
+        //                  bold: true,
+        //                  image: true
+        //              }
+        //          }
+        //      wrapUbbTags:
+        //          {
+        //              blockquote: 1,          // can contain new line
+        //              bold: 0,                // can't contain new line
+        //              image: 0                // can't contain new line
+        //          }
         var k, v, i, l, tagNames, order;
         setting = this.setting;
         for (k in setting.tags) {
@@ -1024,13 +831,46 @@ var UBB = (function () {
             setting.wrapUbbTags[k] = v.canWrap;
         }
     }
+    /**
+     * Util.extend(obj, {newMethod: 'a'});
+     * @param {object} object
+     * @param {object} source
+     */
+    UBB.extend = function(object, source) {
+        var method;
+        for (method in source) {
+            if (source.hasOwnProperty(method)) {
+                object[method] = source[method];
+            }
+        }
+    };
+    /**
+     * add or modify tags
+     * @param {object} tags
+     */
+    UBB.addTags = function(tags) {
+        UBB.extend(tagsParser, tags);
+    };
+    /**
+     * obj = Util.mix({method: 'b'}, {newMethod: 'a'});
+     * @param {object} object
+     * @param {object} object2
+     * @return {object} newObject
+     */
+    UBB.mix = function(object, object2) {
+        var method,
+            re = {};
+        UBB.extend(re, object);
+        UBB.extend(re, object2);
+        return re;
+    };
     UBB.Util = Util;
     /**
-     * @param {object} $dom jquery, must be a block element
+     * @param {object} dom dom object must be a block element
      * @return {string} ubb text
      */
-    UBB.prototype.HTMLtoUBB = function ($dom) {
-        return this.fixUBB(parseHtml($dom, this.setting));
+    UBB.prototype.HTMLtoUBB = function (dom) {
+        return this.fixUBB(parseHtml(dom, this.setting));
     };
     /**
      * @param {string} ubb text
