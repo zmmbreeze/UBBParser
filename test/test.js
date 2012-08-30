@@ -6,6 +6,36 @@ describe('ubb.js:', function() {
         jasmine.Clock.useMock();
     });
 
+    it('Util Test: getComputedStyle', function() {
+        runs(function() {
+            var $html = $('#html2');
+            function css(styleName, value) {
+                var re, defaultCSS;
+                defaultCSS = $html.css(styleName);
+                $html.css(styleName, value);
+                re = UBB.Util.getComputedStyle($html[0], styleName);
+                $html.css(styleName, defaultCSS);
+                return re;
+            }
+            if (jQuery.browser.msie) {
+                expect(css('font-weight', 'bold')).toEqual('700');
+            } else {
+                expect(css('font-weight', 'bold')).toEqual('bold');
+            }
+            expect(css('font-weight', '100')).toEqual('100');
+            expect(css('font-style', 'italic')).toEqual('italic');
+            expect(UBB.Util.RGBtoHEX(css('color', '#000'))).toEqual('#000000');
+            expect(css('display', 'inline')).toEqual('inline');
+            expect(css('display', 'block')).toEqual('block');
+            if (jQuery.browser.msie && (parseInt(jQuery.browser.version, 10) < 7)) {
+                expect(css('display', 'inline-block')).toEqual('inline-block');
+            }
+            expect(css('white-space', 'pre')).toEqual('pre');
+            expect(css('white-space', 'normal')).toEqual('normal');
+            expect(css('white-space', 'nowrap')).toEqual('nowrap');
+        });
+    });
+
     it('UBBtoHTML: normal tag', function() {
         runs(function() {
             var ubb = new UBB({
@@ -28,27 +58,27 @@ describe('ubb.js:', function() {
             re = ubb.UBBtoHTML('[flash]http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf[/flash]');
             expect(re).toEqual('<img class="gui-ubb-flash" data-src="http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf" src="test.jpg" width="480" height="400"/>');
             re = ubb.UBBtoHTML('[blockquote]\nThis is a blockquote!\nAnd it is awesome!\n[/blockquote]');
-            expect(re).toEqual('<blockquote><br/>This is a blockquote!<br/>And it is awesome!<br/></blockquote>');
+            expect(re).toEqual('<blockquote><br/>This&nbsp;is&nbsp;a&nbsp;blockquote!<br/>And&nbsp;it&nbsp;is&nbsp;awesome!<br/></blockquote>');
             re = ubb.UBBtoHTML('[ul]\nThis is a ul!\nAnd it is awesome!\n[/ul]');
-            expect(re).toEqual('<ul><li>This is a ul!</li><li>And it is awesome!</li></ul>');
+            expect(re).toEqual('<ul><li>This&nbsp;is&nbsp;a&nbsp;ul!</li><li>And&nbsp;it&nbsp;is&nbsp;awesome!</li></ul>');
             re = ubb.UBBtoHTML('[ul]This is a ul!\nAnd it is awesome![/ul]');
-            expect(re).toEqual('<ul><li>This is a ul!</li><li>And it is awesome!</li></ul>');
+            expect(re).toEqual('<ul><li>This&nbsp;is&nbsp;a&nbsp;ul!</li><li>And&nbsp;it&nbsp;is&nbsp;awesome!</li></ul>');
             re = ubb.UBBtoHTML('[ul]\nThis is a ul!\nAnd it is awesome![/ul]');
-            expect(re).toEqual('<ul><li>This is a ul!</li><li>And it is awesome!</li></ul>');
+            expect(re).toEqual('<ul><li>This&nbsp;is&nbsp;a&nbsp;ul!</li><li>And&nbsp;it&nbsp;is&nbsp;awesome!</li></ul>');
             re = ubb.UBBtoHTML('[ul]This is a ul!\nAnd it is awesome!\n[/ul]');
-            expect(re).toEqual('<ul><li>This is a ul!</li><li>And it is awesome!</li></ul>');
+            expect(re).toEqual('<ul><li>This&nbsp;is&nbsp;a&nbsp;ul!</li><li>And&nbsp;it&nbsp;is&nbsp;awesome!</li></ul>');
             re = ubb.UBBtoHTML('[ol]\nThis is a ol!\nAnd it is awesome!\n[/ol]');
-            expect(re).toEqual('<ol><li>This is a ol!</li><li>And it is awesome!</li></ol>');
+            expect(re).toEqual('<ol><li>This&nbsp;is&nbsp;a&nbsp;ol!</li><li>And&nbsp;it&nbsp;is&nbsp;awesome!</li></ol>');
             re = ubb.UBBtoHTML('[ol]This is a ol!\nAnd it is awesome![/ol]');
-            expect(re).toEqual('<ol><li>This is a ol!</li><li>And it is awesome!</li></ol>');
+            expect(re).toEqual('<ol><li>This&nbsp;is&nbsp;a&nbsp;ol!</li><li>And&nbsp;it&nbsp;is&nbsp;awesome!</li></ol>');
             re = ubb.UBBtoHTML('[ol]This is a ol!\nAnd it is awesome!\n[/ol]');
-            expect(re).toEqual('<ol><li>This is a ol!</li><li>And it is awesome!</li></ol>');
+            expect(re).toEqual('<ol><li>This&nbsp;is&nbsp;a&nbsp;ol!</li><li>And&nbsp;it&nbsp;is&nbsp;awesome!</li></ol>');
             re = ubb.UBBtoHTML('[ol]\nThis is a ol!\nAnd it is awesome![/ol]');
-            expect(re).toEqual('<ol><li>This is a ol!</li><li>And it is awesome!</li></ol>');
+            expect(re).toEqual('<ol><li>This&nbsp;is&nbsp;a&nbsp;ol!</li><li>And&nbsp;it&nbsp;is&nbsp;awesome!</li></ol>');
             re = ubb.UBBtoHTML('[ref]http://www.guokr.com/article/176586/[/ref]\nAfter ref!');
-            expect(re).toEqual('<div class="gui-ubb-ref">http://www.guokr.com/article/176586/</div>After ref!');
+            expect(re).toEqual('<div class="gui-ubb-ref">http://www.guokr.com/article/176586/</div>After&nbsp;ref!');
             re = ubb.UBBtoHTML('[ref]http://www.guokr.com/\narticle/176586/[/ref]\nAfter ref!');
-            expect(re).toEqual('<div class="gui-ubb-ref">http://www.guokr.com/</div><div class="gui-ubb-ref">article/176586/</div>After ref!');
+            expect(re).toEqual('<div class="gui-ubb-ref">http://www.guokr.com/</div><div class="gui-ubb-ref">article/176586/</div>After&nbsp;ref!');
         });
     });
 
@@ -62,7 +92,7 @@ describe('ubb.js:', function() {
                 });
             function toUbb(html) {
                 $html.html(html);
-                return ubb.HTMLtoUBB($html);
+                return ubb.HTMLtoUBB($html[0]);
             }
             var re = toUbb('<div>\
 normal words!<b>bold</b> <span style="font-weight:bold;">bold</span> normal words! <i>italic</i> Test word~ <span style="font-style:italic;">italic</span> normal words! <a href="http://www.guokr.com/">guokr.com</a><br/>image:<br/><img src="http://guokr.com/skin/imgs/flash.jpg" /><br/>\
@@ -181,7 +211,7 @@ And it\'s awesome![/blockquote]\n\
 
     it('HTMLtoUBB: keepWhiteSpace and keepNewLine', function() {
         runs(function() {
-            var $html = $('#html2'),
+            var $html = $('#html'),
                 ubb = new UBB({
                     defaultColor: '#333333',
                     linkDefaultColor: '#006688',
@@ -189,13 +219,14 @@ And it\'s awesome![/blockquote]\n\
                 });
             function toUbb(html) {
                 $html.html(html);
-                return ubb.HTMLtoUBB($html);
+                // don't use innerHTML
+                return ubb.HTMLtoUBB($html[0]);
             }
             // keepNewLine
             // KeepWhiteSpace
-            $html.css('white-space', 'pre');
+            $html.css('whiteSpace', 'pre');
 
-            var isIE678 = $.browser.msie && (parseInt($.browser.version, 10) <= 8),
+            var isIE678 = jQuery.browser.msie && (parseInt(jQuery.browser.version, 10) <= 8),
                 re = toUbb('<p>   aaaa   </p>');
             if (isIE678) {
                 expect(re).toEqual('aaaa ');
@@ -210,6 +241,7 @@ And it\'s awesome![/blockquote]\n\
             } else {
                 expect(re).toEqual('\u00A0aa   \u00A0   aa\u00A0');
             }
+
             re = toUbb('\naaa\nbbb\n\n');
             expect(re).toEqual('\naaa\nbbb\n');
             re = toUbb('\naaa\n\nbbb\n\n');
@@ -291,7 +323,7 @@ And it\'s awesome![/blockquote]\n\
 
             // not keepNewLine
             // not KeepWhiteSpace
-            $html.css('white-space', 'normal');
+            $html.css('whiteSpace', 'normal');
 
             re = toUbb('<p>   aaaa   </p>');
             expect(re).toEqual('aaaa');
@@ -310,7 +342,7 @@ And it\'s awesome![/blockquote]\n\
             expect(re).toEqual('aaa bbb');
         });
     });
- 
+
     it('UBBToHTML: new line', function() {
         runs(function() {
             var $html = $('#html'),
@@ -321,17 +353,17 @@ And it\'s awesome![/blockquote]\n\
                 });
             function toUbb(html) {
                 $html.html(html);
-                return ubb.HTMLtoUBB($html);
+                return ubb.HTMLtoUBB($html[0]);
             }
             function toHtml(text) {
                 return ubb.UBBtoHTML(text);
             }
             var re = toHtml('Test new line!\nSecond Line.\nLast line.');
-            expect(re).toEqual('Test new line!<br/>Second Line.<br/>Last line.');
+            expect(re).toEqual('Test&nbsp;new&nbsp;line!<br/>Second&nbsp;Line.<br/>Last&nbsp;line.');
             re = toUbb('<div><div><div>First Line.</div></div><div><div>Second Line.</div></div><div>Third Line.</div></div>');
             expect(re).toEqual('First Line.\nSecond Line.\nThird Line.');
             re = toHtml('[ref]http://www.guokr.com/post/263028/[/ref]\nNext line.');
-            expect(re).toEqual('<div class="gui-ubb-ref">http://www.guokr.com/post/263028/</div>Next line.');
+            expect(re).toEqual('<div class="gui-ubb-ref">http://www.guokr.com/post/263028/</div>Next&nbsp;line.');
         });
     });
 
@@ -387,7 +419,7 @@ bbbb\n\
             re = ubb.fixUBB('[bold]before[fake\ntag]after[/bold]');
             expect(re).toEqual('[bold]before\\[fake[/bold]\n[bold]tag\\]after[/bold]');
             re = ubb.UBBtoHTML('\\[bold\\]no bold\\[/bold\\]');
-            expect(re).toEqual('[bold]no bold[/bold]');
+            expect(re).toEqual('[bold]no&nbsp;bold[/bold]');
         });
     });
 });
