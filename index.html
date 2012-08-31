@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>UBB parser</title>
     <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="prism/prism.css" />
     <style type="text/css">
     body {
         padding-top: 60px;
@@ -127,43 +128,43 @@ Third;
 
         <h2 id="API">API</h2>
         <div class="row">
-            <pre>
-var parser = new UBB({
-        defaultColor: '#000000',            // [option] color of all text element
-        linkDefaultColor: '#006699',        // [option] color of a elment
-        flashImage: '/skin/imgs/flash.png', // [option] flash image to show
-        tags: {
-            newtagname: {
-                parseHTML: function(nodeName, node, re) {
-                    // define which dom node to convert
-                    // node is a jquery object
-                    if (nodeName === 'div' && node[0].className === 'gui-ubb-ref') {
-                        // return prefix string
-                        re.prefix = '[ref]' + (re.prefix || '');
-                        // return suffix string
-                        re.suffix = (re.suffix || '') + '[/ref]';
-                    }
-                },
-                parseUBB: function(node, sonString, setting) {
-                    // parser will find a matched tag for you
-                    // return UBB string include sonString
-                    return '&lt;div class="gui-ubb-ref"&gt;' + sonString + '&lt;/div&gt;';
-                },
-                // string.
-                // Specified which tag can be contained.
-                // '' or undefined indicate it can't contian any tag.
-                // '*' indicate it can contian any tag.
-                canContains: 'bold,italic,color,url,image',
-                // bool.
-                // If true, then this tag can contains '\n'.
-                canWrap: 0,
-                // bool.
-                // If true, then the '\n' right after this tag should be ignore.
-                isBlock: 0,
-                noAttr: 1
-            }
+            <div class="span12">
+            <pre><code class="language-javascript">var parser = new UBB({
+    defaultColor: '#000000',            // [option] color of all text element
+    linkDefaultColor: '#006699',        // [option] color of a elment
+    flashImage: '/skin/imgs/flash.png', // [option] flash image to show
+    tags: {
+        newtagname: {
+            parseHTML: function(nodeName, node, re) {
+                // define which dom node to convert
+                // node is a jquery object
+                if (nodeName === 'div' && node[0].className === 'gui-ubb-ref') {
+                    // return prefix string
+                    re.prefix = '[ref]' + (re.prefix || '');
+                    // return suffix string
+                    re.suffix = (re.suffix || '') + '[/ref]';
+                }
+            },
+            parseUBB: function(node, sonString, setting) {
+                // parser will find a matched tag for you
+                // return UBB string include sonString
+                return '&lt;div class="gui-ubb-ref"&gt;' + sonString + '&lt;/div&gt;';
+            },
+            // string.
+            // Specified which tag can be contained.
+            // '' or undefined indicate it can't contian any tag.
+            // '*' indicate it can contian any tag.
+            canContains: 'bold,italic,color,url,image',
+            // bool.
+            // If true, then this tag can contains '\n'.
+            canWrap: 0,
+            // bool.
+            // If true, then the '\n' right after this tag should be ignore.
+            isBlock: 0,
+            noAttr: 1
         }
-    });
+    }
+});
 // convert HTML element to UBB string
 parser.HTMLtoUBB($('#container'));
 // convert UBB string to HTML string
@@ -172,8 +173,8 @@ parser.UBBtoHTML('[bold]aaa[/bold]');
 parser.fixUBB('[bold]aaa');   // ==> echo [bold]aaa[/bold]
 // add tags forever
 // check src/extraTags.js for detail
-// UBB.addTags();
-            </pre>
+// UBB.addTags();</code></pre>
+            </div>
         </div>
 
     </div>
@@ -205,5 +206,6 @@ parser.fixUBB('[bold]aaa');   // ==> echo [bold]aaa[/bold]
         textarea.val(parser.fixUBB(textarea.val()));
     });
     </script>
+    <script src="prism/prism.js"></script>
 </body>
 </html>
