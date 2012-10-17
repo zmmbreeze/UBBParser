@@ -80,6 +80,11 @@ var UBB = (function () {
                 var textNode = Tree.createNode('#text');
                 textNode.value = text;
                 return textNode;
+            },
+            createCursorNode: function() {
+                var cursorNode = Tree.createNode('#cursor');
+                cursorNode.value = '';
+                return cursorNode;
             }
         },
         upperReg = /([A-Z])/g,
@@ -370,6 +375,9 @@ var UBB = (function () {
              * @return {boolean}
              */
             canContains: function(father, son, ubbTagsOrder) {
+                if (father.isRoot || father.name === '#cursor' || son.name === '#cursor') {
+                    return true;
+                }
                 var canContainsTags = ubbTagsOrder[father.name];
                 return typeof canContainsTags === 'boolean' ? canContainsTags : canContainsTags[son.name];
             },
@@ -381,7 +389,7 @@ var UBB = (function () {
              */
             pushOpenUbbTag: function(node, tag, ubbTagsOrder) {
                 var autoClosedNode;
-                while (!node.isRoot && !Util.canContains(node, tag, ubbTagsOrder)) {
+                while (!Util.canContains(node, tag, ubbTagsOrder)) {
                     if (autoClosedNode) {
                         autoClosedNode = node.clone().append(autoClosedNode);
                     } else {
@@ -487,12 +495,20 @@ var UBB = (function () {
                     j = 0,
                     i = 0,
                     l = text.length,
+                    selectionStart = setting.selection ? setting.selection.start : 0,
+                    selectionEnd = setting.selection ? setting.selection.end : 0,
                     buf = '',
                     root = Tree.createNode(),
                     node = root;
                 // mark root
                 root.isRoot = true;
                 for(; i<l; i++) {
+                    if (i === selectionStart) {
+                        node = Util.pushOpenUbbTag(node, Tree.createCursorNode(), ubbTagsOrder);
+                    }
+                    if (i === selectionEnd) {
+                        node = Util.pushCloseUbbTag(node, '#cursor');
+                    }
                     c = text.charAt(i);
                     switch(c) {
                     case '\\':
@@ -600,9 +616,12 @@ var UBB = (function () {
              * @return {string} ubb text of node and it's children
              */
             fixUbbNode: function(node, sonString, setting) {
-                if (node.name === '#text') {
+                switch(node.name) {
+                case '#text':
                     return Util.ubbEscape(node.value);
-                } else {
+                case '#cursor':
+                    return sonString;
+                default:
                     return '['+node.name+(node.attr || '')+']'+sonString+'[/'+node.name+']';
                 }
             }
@@ -870,7 +889,11 @@ var UBB = (function () {
      * @return {string} ubb text
      */
     UBB.prototype.HTMLtoUBB = function (dom) {
-        return this.fixUBB(parseHtml(dom, this.setting));
+        if (dom.nodeType === 1 ) {
+            return this.fixUBB(parseHtml(dom, this.setting));
+        } else {
+            return '';
+        }
     };
     /**
      * @param {string} ubb text
