@@ -100,8 +100,7 @@
             canWrap: 0,
             // bool.
             // If true, then the '\n' right after this tag should be ignore.
-            isBlock: 0,
-            noAttr: 1
+            isBlock: 0
         },
         italic: {
             parseHTML: function(nodeName, node, re) {
@@ -117,8 +116,7 @@
             },
             canContains: 'bold,italic,color,url,image',
             canWrap: 0,
-            isBlock: 0,
-            noAttr: 1
+            isBlock: 0
         },
         color: {
             parseHTML: function(nodeName, node, re, setting) {
@@ -137,8 +135,7 @@
             },
             canContains: 'bold,italic,color,url,image',
             canWrap: 0,
-            isBlock: 0,
-            noAttr: 0
+            isBlock: 0
         },
         url: {
             parseHTML: function(nodeName, node, re) {
@@ -163,8 +160,7 @@
             },
             canContains: 'bold,italic,color,url,image',
             canWrap: 0,
-            isBlock: 0,
-            noAttr: 0
+            isBlock: 0
         },
         image: {
             parseHTML: function(nodeName, node, re) {
@@ -176,8 +172,7 @@
                 return sonString ? ('<img src="' + sonString + '"/>') : '';
             },
             canWrap: 0,
-            isBlock: 0,
-            noAttr: 1
+            isBlock: 0
         },
         video: {
             parseHTML: function(nodeName, node, re) {
@@ -190,16 +185,14 @@
                 return sonString ? ('<img class="gui-ubb-flash" data-src="'+sonString+'" src="'+setting.flashImage+'" width="480" height="400"/>') : '';
             },
             canWrap: 0,
-            isBlock: 0,
-            noAttr: 1
+            isBlock: 0
         },
         flash: {
             parseUBB: function(node, sonString, setting) {
                 return sonString ? ('<img class="gui-ubb-flash" data-src="'+sonString+'" src="'+setting.flashImage+'" width="480" height="400"/>') : '';
             },
             canWrap: 0,
-            isBlock: 0,
-            noAttr: 1
+            isBlock: 0
         },
         blockquote: {
             parseHTML: function(nodeName, node, re) {
@@ -213,8 +206,7 @@
             },
             canContains: '*',
             canWrap: 1,
-            isBlock: 1,
-            noAttr: 1
+            isBlock: 1
         },
         ul: {
             parseHTML: function(nodeName, node, re) {
@@ -237,8 +229,7 @@
             },
             canContains: '*',
             canWrap: 1,
-            isBlock: 1,
-            noAttr: 1
+            isBlock: 1
         },
         ol: {
             parseHTML: function(nodeName, node, re) {
@@ -261,8 +252,7 @@
             },
             canContains: '*',
             canWrap: 1,
-            isBlock: 1,
-            noAttr: 1
+            isBlock: 1
         },
         ref: {
             parseHTML: function(nodeName, node, re) {
@@ -275,8 +265,7 @@
                 return '<div class="gui-ubb-ref">' + sonString + '</div>';
             },
             canWrap: 0,
-            isBlock: 1,
-            noAttr: 1
+            isBlock: 1
         }
     });
 })();
