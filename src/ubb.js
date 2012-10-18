@@ -375,8 +375,11 @@ var UBB = (function () {
              * @return {boolean}
              */
             canContains: function(father, son, ubbTagsOrder) {
-                if (father.isRoot || father.name === '#cursor' || son.name === '#cursor') {
+                if (father.isRoot || son.name === '#cursor') {
                     return true;
+                }
+                if (father.name === '#cursor') {
+                    return false;
                 }
                 var canContainsTags = ubbTagsOrder[father.name];
                 return typeof canContainsTags === 'boolean' ? canContainsTags : canContainsTags[son.name];
