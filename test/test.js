@@ -82,6 +82,52 @@ describe('ubb.js:', function() {
         });
     });
 
+    it('UBBtoHTML: with selection', function() {
+        runs(function() {
+            var ubb = new UBB({
+                defaultColor: '#333333',
+                linkDefaultColor: '#006688',
+                flashImage: 'test.jpg'
+            });
+            var re = ubb.UBBtoHTML('[bold]bold[/bold]');
+            expect(re).toEqual('<b>bold</b>');
+            re = ubb.UBBtoHTML('[italic]italic[/italic]');
+            expect(re).toEqual('<i>italic</i>');
+            re = ubb.UBBtoHTML('[color=blue]blue[/italic]');
+            expect(re).toEqual('<span style="color:blue;">blue</span>');
+            re = ubb.UBBtoHTML('[url href=http://www.guokr.com]guokr.com[/url]');
+            expect(re).toEqual('<a href="http://www.guokr.com">guokr.com</a>');
+            re = ubb.UBBtoHTML('[image]http://guokr.com/skin/imgs/flash.jpg[/image]');
+            expect(re).toEqual('<img src="http://guokr.com/skin/imgs/flash.jpg"/>');
+            re = ubb.UBBtoHTML('[video]http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf[/video]');
+            expect(re).toEqual('<img class="gui-ubb-flash" data-src="http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf" src="test.jpg" width="480" height="400"/>');
+            re = ubb.UBBtoHTML('[flash]http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf[/flash]');
+            expect(re).toEqual('<img class="gui-ubb-flash" data-src="http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf" src="test.jpg" width="480" height="400"/>');
+            re = ubb.UBBtoHTML('[blockquote]\nThis is a blockquote!\nAnd it is awesome!\n[/blockquote]');
+            expect(re).toEqual('<blockquote><br/>This&nbsp;is&nbsp;a&nbsp;blockquote!<br/>And&nbsp;it&nbsp;is&nbsp;awesome!<br/></blockquote>');
+            re = ubb.UBBtoHTML('[ul]\nThis is a ul!\nAnd it is awesome!\n[/ul]');
+            expect(re).toEqual('<ul><li>This&nbsp;is&nbsp;a&nbsp;ul!</li><li>And&nbsp;it&nbsp;is&nbsp;awesome!</li></ul>');
+            re = ubb.UBBtoHTML('[ul]This is a ul!\nAnd it is awesome![/ul]');
+            expect(re).toEqual('<ul><li>This&nbsp;is&nbsp;a&nbsp;ul!</li><li>And&nbsp;it&nbsp;is&nbsp;awesome!</li></ul>');
+            re = ubb.UBBtoHTML('[ul]\nThis is a ul!\nAnd it is awesome![/ul]');
+            expect(re).toEqual('<ul><li>This&nbsp;is&nbsp;a&nbsp;ul!</li><li>And&nbsp;it&nbsp;is&nbsp;awesome!</li></ul>');
+            re = ubb.UBBtoHTML('[ul]This is a ul!\nAnd it is awesome!\n[/ul]');
+            expect(re).toEqual('<ul><li>This&nbsp;is&nbsp;a&nbsp;ul!</li><li>And&nbsp;it&nbsp;is&nbsp;awesome!</li></ul>');
+            re = ubb.UBBtoHTML('[ol]\nThis is a ol!\nAnd it is awesome!\n[/ol]');
+            expect(re).toEqual('<ol><li>This&nbsp;is&nbsp;a&nbsp;ol!</li><li>And&nbsp;it&nbsp;is&nbsp;awesome!</li></ol>');
+            re = ubb.UBBtoHTML('[ol]This is a ol!\nAnd it is awesome![/ol]');
+            expect(re).toEqual('<ol><li>This&nbsp;is&nbsp;a&nbsp;ol!</li><li>And&nbsp;it&nbsp;is&nbsp;awesome!</li></ol>');
+            re = ubb.UBBtoHTML('[ol]This is a ol!\nAnd it is awesome!\n[/ol]');
+            expect(re).toEqual('<ol><li>This&nbsp;is&nbsp;a&nbsp;ol!</li><li>And&nbsp;it&nbsp;is&nbsp;awesome!</li></ol>');
+            re = ubb.UBBtoHTML('[ol]\nThis is a ol!\nAnd it is awesome![/ol]');
+            expect(re).toEqual('<ol><li>This&nbsp;is&nbsp;a&nbsp;ol!</li><li>And&nbsp;it&nbsp;is&nbsp;awesome!</li></ol>');
+            re = ubb.UBBtoHTML('[ref]http://www.guokr.com/article/176586/[/ref]\nAfter ref!');
+            expect(re).toEqual('<div class="gui-ubb-ref">http://www.guokr.com/article/176586/</div>After&nbsp;ref!');
+            re = ubb.UBBtoHTML('[ref]http://www.guokr.com/\narticle/176586/[/ref]\nAfter ref!');
+            expect(re).toEqual('<div class="gui-ubb-ref">http://www.guokr.com/</div><div class="gui-ubb-ref">article/176586/</div>After&nbsp;ref!');
+        });
+    });
+
     it('HTMLtoUBB: normal tag', function() {
         runs(function() {
             var $html = $('#html'),

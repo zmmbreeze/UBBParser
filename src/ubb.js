@@ -475,9 +475,12 @@ var UBB = (function () {
              * @param {object} ubbTagsOrder
              * @param {object} wrapUbbTags
              * @param {boolean} needEncodeHtml
+             * @param {object} selection object descript the selection range
+             *                              {start: 10, end: 100}
+             *                              by default is {start: 0, end: 0}
              * @return {array} tag list
              */
-            scanUbbText: function(text, setting, needEncodeHtml) {
+            scanUbbText: function(text, setting, needEncodeHtml, selection) {
                 // encode html
                 if (needEncodeHtml) {
                     text = Util.htmlEncode(text);
@@ -487,28 +490,59 @@ var UBB = (function () {
                     ubbTagsOrder = setting.ubbTagsOrder,
                     wrapUbbTags = setting.wrapUbbTags,
                     // state value represent next char not be escape
-                    NOESCAPE = 0,
+                    NORMAL = 0,
                     // state value represent next char should be escape
                     ESCAPE = 1,
+                    // state value represent buf is a tag name not normal text
+                    PROCESSINGTAG = 2,
+                    // state value represent need to append start cursor after appended a normal tag
+                    APPENDSTARTCURSOR = 3,
+                    // state value represent need to append end cursor after appended a normal tag
+                    APPENDENDCURSOR = 4,
+                    // state value represent need to append start and end cursor after appended a normal tag
+                    APEENDCURSORS = 5,
                     // state value
-                    state = NOESCAPE,
-                    j = 0,
+                    state = NORMAL,
                     i = 0,
                     l = text.length,
-                    selectionStart = setting.selection ? setting.selection.start : 0,
-                    selectionEnd = setting.selection ? setting.selection.end : 0,
+                    selectionStart = selection ? (selection.start || 0) : 0,
+                    selectionEnd = selection ? (selection.end || selectionStart) : 0,
                     buf = '',
                     root = Tree.createNode(),
                     node = root;
                 // mark root
                 root.isRoot = true;
                 for(; i<l; i++) {
+                    // push start cursor
                     if (i === selectionStart) {
-                        node = Util.pushOpenUbbTag(node, Tree.createCursorNode(), ubbTagsOrder);
+                        // not processing tag
+                        // then push start cursor tag
+                        if (state !== PROCESSINGTAG) {
+                            if (buf) {
+                                node.append(Tree.createTextNode(buf));
+                                buf = '';
+                            }
+                            node = Util.pushOpenUbbTag(node, Tree.createCursorNode(), ubbTagsOrder);
+                        } else {
+                            state = APPENDSTARTCURSOR;
+                        }
                     }
+                    // push end cursor
                     if (i === selectionEnd) {
-                        node = Util.pushCloseUbbTag(node, '#cursor');
+                        // not processing tag or need to append start cursor
+                        // then push end cursor tag
+                        if (state !== PROCESSINGTAG && state !== APPENDSTARTCURSOR) {
+                            if (buf) {
+                                node.append(Tree.createTextNode(buf));
+                                buf = '';
+                            }
+                            node = Util.pushCloseUbbTag(node, '#cursor');
+                        } else {
+                            state = state === APPENDSTARTCURSOR ? APEENDCURSORS : APPENDENDCURSOR;
+                        }
                     }
+
+                    // push normal tags / text / \n
                     c = text.charAt(i);
                     switch(c) {
                     case '\\':
@@ -517,18 +551,18 @@ var UBB = (function () {
                     case '[':
                         if (state === ESCAPE) {
                             buf += '[';
-                            state = NOESCAPE;
+                            state = NORMAL;
                         } else {
                             if (buf) {
                                 node.append(Tree.createTextNode(buf));
                             }
                             buf = '[';
+                            state = PROCESSINGTAG;
                         }
                         break;
                     case ']':
                         if (state === ESCAPE) {
                             buf += ']';
-                            state = NOESCAPE;
                         } else {
                             r = ubbTagNameReg.exec(buf);
                             // is tag
@@ -552,11 +586,21 @@ var UBB = (function () {
                                 node.append(Tree.createTextNode(buf + ']'));
                             }
                             buf = '';
+
+                            // append start cursor
+                            if (state === APPENDSTARTCURSOR || state === APEENDCURSORS) {
+                                node = Util.pushOpenUbbTag(node, Tree.createCursorNode(), ubbTagsOrder);
+                            }
+                            // append end cursor
+                            if (state === APPENDENDCURSOR || state === APEENDCURSORS) {
+                                node = Util.pushCloseUbbTag(node, '#cursor');
+                            }
                         }
+                        state = NORMAL;
                         break;
                     case '\n':
                         if (state === ESCAPE) {
-                            state = NOESCAPE;
+                            state = NORMAL;
                         }
                         if (buf) {
                             node.append(Tree.createTextNode(buf));
@@ -566,7 +610,7 @@ var UBB = (function () {
                         break;
                     default:
                         if (state === ESCAPE) {
-                            state = NOESCAPE;
+                            state = NORMAL;
                         }
                         buf += c;
                         break;
@@ -583,13 +627,15 @@ var UBB = (function () {
              * @param {object} node ubb node
              * @param {string} sonString the ubb text of node's children
              * @param {object} setting
+             * @param {object} selection
              * @param {object} state
              * @return {string} html text of node and it's children
              */
-            parseUbbNode: function(node, sonString, setting, state) {
+            parseUbbNode: function(node, sonString, setting, selection, state) {
                 var tagsParser = setting.tags,
                     tagInfo;
-                if (node.name === '#text') {
+                switch(node.name) {
+                case '#text':
                     if (node.value === '\n') {
                         if (state.nobr) {
                             state.nobr = false;
@@ -601,11 +647,22 @@ var UBB = (function () {
                         state.nobr = false;
                         return node.value.replace(/\s/g, '&nbsp;');
                     }
-                } else if ((tagInfo = tagsParser[node.name]) && tagInfo.parseUBB) {
-                    if (tagInfo.isBlock) {
-                        state.nobr = true;
+                    break;
+                case '#cursor':
+                    if (selection) {
+                        return selection.prefix + sonString + selection.suffix;
+                    } else {
+                        return sonString;
                     }
-                    return tagInfo.parseUBB(node, sonString, setting);
+                    break;
+                default:
+                    if ((tagInfo = tagsParser[node.name]) && tagInfo.parseUBB) {
+                        if (tagInfo.isBlock) {
+                            state.nobr = true;
+                        }
+                        return tagInfo.parseUBB(node, sonString, setting);
+                    }
+                    break;
                 }
             },
             /**
@@ -694,20 +751,20 @@ var UBB = (function () {
          * @param {object} state
          * @return {string} html text
          */
-        parseUbb = function(node, setting, state) {
+        parseUbb = function(node, setting, selection, state) {
             var i, l,
                 re = [];
             state = state || {};
 
             if (node.isNode) {
                 for (i=0,l=node.length; i<l; i++) {
-                    re.push(parseUbb(node[i], setting, state));
+                    re.push(parseUbb(node[i], setting, selection, state));
                 }
             }
 
             // root node has no meaning
             if (!node.isRoot) {
-                return Util.parseUbbNode(node, re.join(''), setting, state);
+                return Util.parseUbbNode(node, re.join(''), setting, selection, state);
             } else {
                 return re.join('');
             }
@@ -800,11 +857,7 @@ var UBB = (function () {
      *  @param {object} setting
      */
     function UBB(setting) {
-        this.setting = UBB.mix({
-                            defaultColor: '#000000',            // color of all text element
-                            linkDefaultColor: '#006699',        // color of a elment
-                            flashImage: '/skin/imgs/flash.png'  // flash image to show
-                       }, setting);
+        this.setting = UBB.mix({}, setting);
         this.setting.tags = UBB.mix(tagsParser, this.setting.tags);
         this.setting.ubbTagsOrder = {};
         this.setting.wrapUbbTags = {};
@@ -899,8 +952,12 @@ var UBB = (function () {
      * @param {string} ubb text
      * @return {string} html text
      */
-    UBB.prototype.UBBtoHTML = function(ubb) {
-        return parseUbb(Util.scanUbbText(ubb, this.setting, true), this.setting);
+    UBB.prototype.UBBtoHTML = function(ubb, selection) {
+        if (selection) {
+            selection.prefix = selection.prefix || '';
+            selection.suffix = selection.suffix || '';
+        }
+        return parseUbb(Util.scanUbbText(ubb, this.setting, true, selection), this.setting, selection);
     };
     /**
      * fix error ubb text
