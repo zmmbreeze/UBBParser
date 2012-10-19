@@ -54,6 +54,25 @@
                 RGB2HexValue = '#' + RGB2HexValue;
             }
             return RGB2HexValue;
+        },
+        getTextOfUBBNode: function (node) {
+            if (node.length) {
+                var child,
+                    re = '',
+                    i = 0,
+                    l = node.length;
+                for (; i<l; i++) {
+                    child = node[i];
+                    if (child.name === '#text') {
+                        re += child.value;
+                    } else {
+                        re += this.getTextOfUBBNode(child);
+                    }
+                }
+                return re;
+            } else {
+                return '';
+            }
         }
     });
     var Util = UBB.Util;
@@ -149,12 +168,7 @@
                     href = node.attr ? node.attr.replace(/^\ href\=/, '') : '';
                 if (!node.attr) {
                     // for [url]http://www.guokr.com/question/[bold]265263[/bold]/[/url]
-                    for (i=0,l=node.length; i<l; i++) {
-                        t = node[i];
-                        if (t.name === '#text') {
-                            href += t.value;
-                        }
-                    }
+                    href = Util.getTextOfUBBNode(node);
                 }
                 return '<a href="' + href + '">' + sonString + '</a>';
             },
@@ -169,6 +183,7 @@
                 }
             },
             parseUBB: function(node, sonString, setting) {
+                sonString = Util.getTextOfUBBNode(node);
                 return sonString ? ('<img src="' + sonString + '"/>') : '';
             },
             canWrap: 0,
@@ -182,6 +197,7 @@
                 }
             },
             parseUBB: function(node, sonString, setting) {
+                sonString = Util.getTextOfUBBNode(node);
                 return sonString ? ('<img class="gui-ubb-flash" data-src="'+sonString+'" src="'+setting.flashImage+'" width="480" height="400"/>') : '';
             },
             canWrap: 0,
@@ -189,6 +205,7 @@
         },
         flash: {
             parseUBB: function(node, sonString, setting) {
+                sonString = Util.getTextOfUBBNode(node);
                 return sonString ? ('<img class="gui-ubb-flash" data-src="'+sonString+'" src="'+setting.flashImage+'" width="480" height="400"/>') : '';
             },
             canWrap: 0,

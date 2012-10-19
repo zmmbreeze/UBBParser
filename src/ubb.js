@@ -515,6 +515,11 @@ var UBB = (function () {
                     node = root;
                 // mark root
                 root.isRoot = true;
+                // validate selection
+                if (selectionEnd < selectionStart) {
+                    throw new Error('UBBtoHTML(): selection end cursor was before start cursor.');
+                }
+                // do scan
                 for(; i<l; i++) {
                     // push start cursor
                     if (i === selectionStart) {
@@ -630,11 +635,10 @@ var UBB = (function () {
              * @param {object} node ubb node
              * @param {string} sonString the ubb text of node's children
              * @param {object} setting
-             * @param {object} selection
              * @param {object} state
              * @return {string} html text of node and it's children
              */
-            parseUbbNode: function(node, sonString, setting, selection, state) {
+            parseUbbNode: function(node, sonString, setting, state) {
                 var tagsParser = setting.tags,
                     tagInfo;
                 switch(node.name) {
@@ -652,12 +656,7 @@ var UBB = (function () {
                     }
                     break;
                 case '#cursor':
-                    if (selection) {
-                        return selection.prefix + sonString + selection.suffix;
-                    } else {
-                        return sonString;
-                    }
-                    break;
+                    return setting.selectionPrefix + sonString + setting.selectionSuffix;
                 default:
                     if ((tagInfo = tagsParser[node.name]) && tagInfo.parseUBB) {
                         if (tagInfo.isBlock) {
@@ -754,20 +753,20 @@ var UBB = (function () {
          * @param {object} state
          * @return {string} html text
          */
-        parseUbb = function(node, setting, selection, state) {
+        parseUbb = function(node, setting, state) {
             var i, l,
                 re = [];
             state = state || {};
 
             if (node.isNode) {
                 for (i=0,l=node.length; i<l; i++) {
-                    re.push(parseUbb(node[i], setting, selection, state));
+                    re.push(parseUbb(node[i], setting, state));
                 }
             }
 
             // root node has no meaning
             if (!node.isRoot) {
-                return Util.parseUbbNode(node, re.join(''), setting, selection, state);
+                return Util.parseUbbNode(node, re.join(''), setting, state);
             } else {
                 return re.join('');
             }
@@ -860,7 +859,10 @@ var UBB = (function () {
      *  @param {object} setting
      */
     function UBB(setting) {
-        this.setting = UBB.mix({}, setting);
+        this.setting = UBB.mix({
+                selectionPrefix: '',
+                selectionSuffix: ''
+            }, setting);
         this.setting.tags = UBB.mix(tagsParser, this.setting.tags);
         this.setting.ubbTagsOrder = {};
         this.setting.wrapUbbTags = {};
@@ -956,11 +958,7 @@ var UBB = (function () {
      * @return {string} html text
      */
     UBB.prototype.UBBtoHTML = function(ubb, selection) {
-        if (selection) {
-            selection.prefix = selection.prefix || '';
-            selection.suffix = selection.suffix || '';
-        }
-        return parseUbb(Util.scanUbbText(ubb, this.setting, true, selection), this.setting, selection);
+        return parseUbb(Util.scanUbbText(ubb, this.setting, true, selection), this.setting);
     };
     /**
      * fix error ubb text

@@ -23,7 +23,7 @@
     .html {
         word-wrap: break-word;
     }
-    .selection {background-color: blue; color: #FFF;}
+    .selection {background-color: blue; color: #FFF;border-left: 2px solid #333;}
     .selection * {background-color: blue; color: #FFF;}
     </style>
 </head>
@@ -237,11 +237,17 @@ parser.fixUBB('[bold]aaa');   // ==> echo [bold]aaa[/bold]
         var textarea = $fixUBB.find('textarea');
         textarea.val(parser.fixUBB(textarea.val()));
     });
+    var parserWithSel = new UBB({
+        defaultColor: '#333333',
+        linkDefaultColor: '#0088cc',
+        selectionPrefix: '<span class="selection">',
+        selectionSuffix: '</span>'
+    });
     $UBBtoHTMLwithSel.find('button').click(function() {
         var sel = textApi.getSelection($UBBtoHTMLwithSel.find('textarea')[0]);
         sel.prefix = '<span class="selection">';
         sel.suffix = '</span>'
-        var html = parser.UBBtoHTML($UBBtoHTMLwithSel.find('textarea').val(), sel);
+        var html = parserWithSel.UBBtoHTML($UBBtoHTMLwithSel.find('textarea').val(), sel);
         $UBBtoHTMLwithSel.find('.html').html(html);
     });
     </script>
