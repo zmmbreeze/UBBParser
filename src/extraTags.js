@@ -2,6 +2,8 @@
  * UBBParser
  * @author mzhou / @zhoumm
  * @log 0.1
+ *      0.2 add getTextOfUBBNode
+ *          fix image/video/url/flash tag's bug
  */
 (function() {
     UBB.extend(UBB.Util, {
