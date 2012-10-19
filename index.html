@@ -23,6 +23,8 @@
     .html {
         word-wrap: break-word;
     }
+    .selection {background-color: blue; color: #FFF;border-left: 2px solid #333;}
+    .selection * {background-color: blue; color: #FFF;}
     </style>
 </head>
 <body>
@@ -61,6 +63,7 @@
           <li class="active"><a href="#HTMLtoUBB">HTMLtoUBB</a></li>
           <li><a href="#UBBtoHTML">UBBtoHTML</a></li>
           <li><a href="#fixUBB">fixUBB</a></li>
+          <li><a href="#UBBtoHTMLwithSel">UBBtoHTML with selection</a></li>
         </ul>
         <div id="myTabContent" class="tab-content">
             <div class="tab-pane fade active in" id="HTMLtoUBB">
@@ -128,6 +131,27 @@ Third;
 [BOLD]UBB tags are case-insensitive.[/BOLD]</textarea>
                 </div>
             </div>
+            <div class="tab-pane fade" id="UBBtoHTMLwithSel">
+                <div class="row">
+                    <div class="span4 well html"></div>
+                    <div class="span2"><button class="btn btn-primary" type="button">&lt;&lt;UBBtoHTML</button></div>
+                    <textarea rows="20" class="span5">
+[blockquote][url href=https://github.com/zmmbreeze/UBBParser][bold]UBBParser[/bold][/url] is a UBB code parser writing in javascript.
+It is highly flexible and easy to custom. Support major desktop browser like IE 6+,Firefox10+,Safari5+,Opera,Chrome.
+[/blockquote]
+
+[bold]Feathure:[/bold]
+[ol]
+Convert UBB string to HTML string;
+Convert HTML element to UBB string, parse by element style not html string;
+Auto correct UBB string;
+Custom your own UBB tag;
+[/ol]
+
+[bold]NOTE:[/bold]
+When converting HTML elements to UBB string, UBBParser can deal with whitespace and newline in pre style. But in case of IE 6/7/8's bug, it's not work very well in this situation.</textarea>
+                </div>
+            </div>
         </div>
 
 
@@ -186,6 +210,7 @@ parser.fixUBB('[bold]aaa');   // ==> echo [bold]aaa[/bold]
     <script src="src/ubb.js"></script>
     <script src="src/extraTags.js"></script>
     <script src="src/jquery.1.7.1.min.js"></script>
+    <script src="src/TextApi.js"></script>
     <script src="bootstrap/js/bootstrap.min.js"></script>
     <script>
     $('#myTab a').click(function (e) {
@@ -198,7 +223,9 @@ parser.fixUBB('[bold]aaa');   // ==> echo [bold]aaa[/bold]
         }),
         $UBBtoHTML = $('#UBBtoHTML'),
         $fixUBB = $('#fixUBB'),
-        $HTMLtoUBB = $('#HTMLtoUBB');
+        $HTMLtoUBB = $('#HTMLtoUBB'),
+        $UBBtoHTMLwithSel = $('#UBBtoHTMLwithSel'),
+        textApi = new TextApi($UBBtoHTMLwithSel.find('textarea')[0]);
 
     $UBBtoHTML.find('button').click(function() {
         $UBBtoHTML.find('.html').html(parser.UBBtoHTML($UBBtoHTML.find('textarea').val()));
@@ -209,6 +236,19 @@ parser.fixUBB('[bold]aaa');   // ==> echo [bold]aaa[/bold]
     $fixUBB.find('button').click(function() {
         var textarea = $fixUBB.find('textarea');
         textarea.val(parser.fixUBB(textarea.val()));
+    });
+    var parserWithSel = new UBB({
+        defaultColor: '#333333',
+        linkDefaultColor: '#0088cc',
+        selectionPrefix: '<span class="selection">',
+        selectionSuffix: '</span>'
+    });
+    $UBBtoHTMLwithSel.find('button').click(function() {
+        var sel = textApi.getSelection($UBBtoHTMLwithSel.find('textarea')[0]);
+        sel.prefix = '<span class="selection">';
+        sel.suffix = '</span>'
+        var html = parserWithSel.UBBtoHTML($UBBtoHTMLwithSel.find('textarea').val(), sel);
+        $UBBtoHTMLwithSel.find('.html').html(html);
     });
     </script>
     <script src="prism/prism.js"></script>

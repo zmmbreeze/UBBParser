@@ -17,11 +17,9 @@ describe('ubb.js:', function() {
                 $html.css(styleName, defaultCSS);
                 return re;
             }
-            if (jQuery.browser.msie) {
-                expect(css('font-weight', 'bold')).toEqual('700');
-            } else {
-                expect(css('font-weight', 'bold')).toEqual('bold');
-            }
+            var bold = css('font-weight', 'bold');
+            bold = bold === '700' ? 'bold' : 'bold';
+            expect(bold).toEqual('bold');
             expect(css('font-weight', '100')).toEqual('100');
             expect(css('font-style', 'italic')).toEqual('italic');
             expect(UBB.Util.RGBtoHEX(css('color', '#000'))).toEqual('#000000');
@@ -51,6 +49,8 @@ describe('ubb.js:', function() {
             expect(re).toEqual('<span style="color:blue;">blue</span>');
             re = ubb.UBBtoHTML('[url href=http://www.guokr.com]guokr.com[/url]');
             expect(re).toEqual('<a href="http://www.guokr.com">guokr.com</a>');
+            re = ubb.UBBtoHTML('[url]http://www.guokr.com/question/[bold]265263[/bold]/[/url]');
+            expect(re).toEqual('<a href="http://www.guokr.com/question/265263/">http://www.guokr.com/question/<b>265263</b>/</a>');
             re = ubb.UBBtoHTML('[image]http://guokr.com/skin/imgs/flash.jpg[/image]');
             expect(re).toEqual('<img src="http://guokr.com/skin/imgs/flash.jpg"/>');
             re = ubb.UBBtoHTML('[video]http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf[/video]');
@@ -79,6 +79,61 @@ describe('ubb.js:', function() {
             expect(re).toEqual('<div class="gui-ubb-ref">http://www.guokr.com/article/176586/</div>After&nbsp;ref!');
             re = ubb.UBBtoHTML('[ref]http://www.guokr.com/\narticle/176586/[/ref]\nAfter ref!');
             expect(re).toEqual('<div class="gui-ubb-ref">http://www.guokr.com/</div><div class="gui-ubb-ref">article/176586/</div>After&nbsp;ref!');
+        });
+    });
+
+    it('UBBtoHTML: with selection', function() {
+        runs(function() {
+            var ubb = new UBB({
+                    defaultColor: '#333333',
+                    linkDefaultColor: '#006688',
+                    flashImage: 'test.jpg',
+                    selectionPrefix: '<span class="sel">',
+                    selectionSuffix: '</span>'
+                }),
+                prefix = '<span>',
+                suffix = '</span>';
+            var re = ubb.UBBtoHTML('Test word', {start: 6, end: 8});
+            expect(re).toEqual('Test&nbsp;w<span class="sel">or</span>d');
+            re = ubb.UBBtoHTML('Test word.\nTest word2.', {start: 6, end: 15});
+            expect(re).toEqual('Test&nbsp;w<span class="sel">ord.</span><br/><span class="sel">Test</span>&nbsp;word2.');
+            re = ubb.UBBtoHTML('[bold]bold[/bold]', {start: 6, end: 10});
+            expect(re).toEqual('<b><span class="sel">bold</span></b>');
+            re = ubb.UBBtoHTML('[italic]italic[/italic]');
+            expect(re).toEqual('<span class="sel"></span><i>italic</i>');
+            re = ubb.UBBtoHTML('[italic]italic[/italic]', {start: 16, end: 17});
+            expect(re).toEqual('<i>italic</i><span class="sel"></span>');
+            re = ubb.UBBtoHTML('[italic]italic[/italic]', {start: 16, end: 200});
+            expect(re).toEqual('<i>italic</i><span class="sel"></span>');
+            re = ubb.UBBtoHTML('aa[italic]italic[/italic]', {start: 0, end: 5});
+            expect(re).toEqual('<span class="sel">aa</span><i><span class="sel"></span>italic</i>');
+            re = ubb.UBBtoHTML('[italic]italic[/italic]aa', {start: 20, end: 25});
+            expect(re).toEqual('<i>italic</i><span class="sel">aa</span>');
+            re = ubb.UBBtoHTML('[italic]italic[/italic]', {start: null, end: null});
+            expect(re).toEqual('<span class="sel"></span><i>italic</i>');
+            try {
+                re = ubb.UBBtoHTML('[italic]italic[/italic]', {start: 6, end: 3});
+            } catch(e) {
+                expect(e.message).toEqual('UBBtoHTML(): selection end cursor was before start cursor.');
+            }
+            re = ubb.UBBtoHTML('[color=blue]blue[/italic]', {start: 5, end: 13});
+            expect(re).toEqual('<span style="color:blue;"><span class="sel">b</span>lue</span>');
+            re = ubb.UBBtoHTML('[url href=http://www.guokr.com]guokr.com[/url]', {start: 5, end: 10});
+            expect(re).toEqual('<a href="http://www.guokr.com"><span class="sel"></span>guokr.com</a>');
+            re = ubb.UBBtoHTML('[url]http://www.guokr.com[/url]', {start: 6, end: 10});
+            expect(re).toEqual('<a href="http://www.guokr.com">h<span class="sel">ttp:</span>//www.guokr.com</a>');
+            re = ubb.UBBtoHTML('[image]http://guokr.com/skin/imgs/flash.jpg[/image]', {start: 5, end: 10});
+            expect(re).toEqual('<img src="http://guokr.com/skin/imgs/flash.jpg"/>');
+            re = ubb.UBBtoHTML('[video]http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf[/video]', {start: 5, end: 10});
+            expect(re).toEqual('<img class="gui-ubb-flash" data-src="http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf" src="test.jpg" width="480" height="400"/>');
+            re = ubb.UBBtoHTML('[flash]http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf[/flash]', {start: 5, end: 10});
+            expect(re).toEqual('<img class="gui-ubb-flash" data-src="http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf" src="test.jpg" width="480" height="400"/>');
+            re = ubb.UBBtoHTML('[flash]http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf[/flash]', {start: 0, end: 74});
+            expect(re).toEqual('<span class="sel"></span><img class="gui-ubb-flash" data-src="http://player.youku.com/player.php/sid/XNDMwNDEzMjc2/v.swf" src="test.jpg" width="480" height="400"/><span class="sel"></span>');
+            re = ubb.UBBtoHTML('[blockquote]\nThis is a blockquote!\nAnd it is awesome!\n[/blockquote]', {start: 0, end: 74});
+            expect(re).toEqual('<span class="sel"></span><blockquote><span class="sel"></span><br/><span class="sel">This&nbsp;is&nbsp;a&nbsp;blockquote!</span><br/><span class="sel">And&nbsp;it&nbsp;is&nbsp;awesome!</span><br/><span class="sel"></span></blockquote><span class="sel"></span>');
+            re = ubb.UBBtoHTML('[ul]\nThis is a ul!\nAnd it is awesome!\n[/ul]', {start: 5, end: 10});
+            expect(re).toEqual('<ul><li><span class="sel">This&nbsp;</span>is&nbsp;a&nbsp;ul!</li><li>And&nbsp;it&nbsp;is&nbsp;awesome!</li></ul>');
         });
     });
 
