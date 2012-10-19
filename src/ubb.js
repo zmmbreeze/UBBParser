@@ -9,6 +9,7 @@
  *          remove jquery require
  *          fix UBBtoHTML whitespace convert to &nbsp;
  *          seperate tagParser
+ *      0.6 add selection support
  */
 
 
