@@ -572,17 +572,23 @@ var UBB = (function () {
              */
             parseUbbNode: function(node, sonString, setting, state) {
                 var tagsParser = setting.tags,
-                    tagInfo, tagR, brPrefix;
+                    tagInfo;
                 if (node.name === '#text') {
                     if (node.value === '\n') {
-                        brPrefix = state.hasText ? '' : '<br/>';
-                        state.hasText = false;
-                        return brPrefix + '</div><div>';
+                        if (state.nobr) {
+                            state.nobr = false;
+                            return '';
+                        } else {
+                            return '<br/>';
+                        }
                     } else {
-                        state.hasText = true;
+                        state.nobr = false;
                         return node.value.replace(/\s/g, '&nbsp;');
                     }
                 } else if ((tagInfo = tagsParser[node.name]) && tagInfo.parseUBB) {
+                    if (tagInfo.isBlock) {
+                        state.nobr = true;
+                    }
                     return tagInfo.parseUBB(node, sonString, setting);
                 }
             },
@@ -684,7 +690,7 @@ var UBB = (function () {
             if (!node.isRoot) {
                 return Util.parseUbbNode(node, re.join(''), setting, state);
             } else {
-                return '<div>' + re.join('') + '</div>';
+                return re.join('');
             }
         },
         /**
