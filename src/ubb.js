@@ -9,6 +9,7 @@
  *          remove jquery require
  *          fix UBBtoHTML whitespace convert to &nbsp;
  *          seperate tagParser
+ *      0.5.1 number can be a tag name now, like: [h1]Title[/h1]
  */
 
 
@@ -86,7 +87,7 @@ var UBB = (function () {
         dashReg = /-([a-z])/g,
         numReg = /^-?\d/,
         numpxReg = /^-?\d+(?:px)?$/i,
-        ubbTagNameReg = /\[(\/)?([a-zA-Z]+)/,
+        ubbTagNameReg = /\[(\/)?([a-zA-Z0-9]+)/,
         /*
          * Custom tags
          */
